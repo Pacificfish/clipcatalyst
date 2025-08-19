@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
     url: 'https://clipcatalyst.app',
     siteName: 'ClipCatalyst',
-    images: [{ url: '/og.png', width: 1200, height: 630 }],
+    images: [{ url: '/og.svg', width: 1200, height: 630 }],
     locale: 'en_US',
     type: 'website',
   },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'ClipCatalyst – Viral shorts in minutes',
     description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
-    images: ['/og.png'],
+    images: ['/og.svg'],
   },
 }
 
