@@ -16,8 +16,8 @@ export default function Header(){
           <Link href="/lab" className="text-white">Lab</Link>
         </nav>
         <div className="flex items-center gap-3">
-          <Link href="/lab" className="btn">See Features</Link>
-          <Link href="/get-started" className="btn-primary">Get Started</Link>
+          <Link href="/#features" className="btn">See Features</Link>
+          <Link href="/lab" className="btn-primary">Get Started</Link>
         </div>
       </div>
       <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />

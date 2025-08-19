@@ -1,0 +1,17 @@
+
+> dev
+> next dev --port 3000 --hostname 0.0.0.0
+
+  ▲ Next.js 14.2.31
+  - Local:        http://localhost:3000
+  - Network:      http://0.0.0.0:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 1449ms (504 modules)
+ GET / 200 in 1585ms
+ ○ Compiling /lab ...
+ ✓ Compiled /lab in 583ms (647 modules)
+ ✓ Compiled in 346ms (646 modules)
