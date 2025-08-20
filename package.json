@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "render": "node scripts/render.js"
   },
   "devDependencies": {
     "@types/html-to-text": "^9.0.4",
@@ -19,6 +20,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.2",
     "html-to-text": "^9.0.5",
     "next": "14.2.31",
     "node-fetch": "^3.3.2",

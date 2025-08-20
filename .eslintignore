@@ -1,0 +1,19 @@
+# Folders
+node_modules
+.next
+out
+dist
+build
+coverage
+.tmp
+.temp
+.turbo
+
+# Files
+*.min.js
+*.min.css
+
+# Env/OS
+.DS_Store
+.env*
+

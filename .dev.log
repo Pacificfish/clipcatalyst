@@ -1,0 +1,1216 @@
+
+> dev
+> next dev
+
+  ▲ Next.js 14.2.31
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1158ms
+ ○ Compiling / ...
+ ✓ Compiled / in 889ms (507 modules)
+ GET / 200 in 1036ms
+ ○ Compiling /lab ...
+ ✓ Compiled /lab in 533ms (650 modules)
+ ✓ Compiled /api/projects in 114ms (423 modules)
+ ✓ Compiled (426 modules)
+ GET /api/usage 200 in 1155ms
+ GET /api/projects 200 in 1316ms
+ GET /api/projects 200 in 309ms
+ ✓ Compiled /api/render in 137ms (433 modules)
+ POST /api/render 200 in 11166ms
+ GET /api/usage 200 in 411ms
+ ✓ Compiled in 478ms (648 modules)
+ ✓ Compiled /api/usage in 73ms (420 modules)
+ ✓ Compiled (424 modules)
+ GET /api/usage 200 in 902ms
+ GET /api/projects 200 in 1125ms
+ GET /api/projects 200 in 267ms
+ GET /api/usage 200 in 582ms
+ GET /api/projects 200 in 746ms
+ GET /api/usage 200 in 807ms
+ ✓ Compiled /api/media in 189ms (423 modules)
+ POST /api/media 200 in 815ms
+ ✓ Compiled /api/render in 86ms (431 modules)
+ POST /api/render 500 in 17989ms
+ ✓ Compiled in 261ms (648 modules)
+ ✓ Compiled in 360ms (648 modules)
+ GET /lab 200 in 114ms
+ ✓ Compiled /api/usage in 126ms (420 modules)
+ ✓ Compiled (424 modules)
+ GET /api/usage 200 in 759ms
+ GET /api/projects 200 in 1000ms
+ GET /api/projects 200 in 406ms
+ ✓ Compiled /api/media in 97ms (426 modules)
+ POST /api/media 200 in 1326ms
+ ✓ Compiled /api/render in 87ms (433 modules)
+ POST /api/render 500 in 36916ms
+ POST /api/media 200 in 1802ms
+ POST /api/media 200 in 1285ms
+ POST /api/media 200 in 1244ms
+ POST /api/render 500 in 85234ms
+ POST /api/render 500 in 87520ms
+ POST /api/render 500 in 60116ms
+ GET /api/usage 200 in 554ms
+ GET /lab 200 in 118ms
+ GET /api/usage 200 in 375ms
+ GET /api/projects 200 in 452ms
+ GET /api/projects 200 in 255ms
+ POST /api/media 200 in 1315ms
+ POST /api/render 500 in 32142ms
+ ✓ Compiled / in 180ms (324 modules)
+ GET / 200 in 310ms
+ ✓ Compiled /api/usage in 48ms (422 modules)
+ ✓ Compiled (426 modules)
+ GET /api/usage 200 in 595ms
+ GET /api/projects 200 in 674ms
+ GET /api/projects 200 in 296ms
+ ✓ Compiled /api/media in 107ms (428 modules)
+ POST /api/media 200 in 1949ms
+ ✓ Compiled /api/render in 112ms (435 modules)
+ POST /api/render 500 in 28363ms
+ POST /api/media 200 in 1440ms
+ POST /api/render 500 in 39949ms
+ GET /api/usage 200 in 398ms
+ GET /lab 200 in 112ms
+ GET /api/usage 200 in 219ms
+ GET /api/projects 200 in 495ms
+ GET /api/projects 200 in 289ms
+ POST /api/media 200 in 1362ms
+ POST /api/render 500 in 30566ms
+ GET /lab 200 in 72ms
+ GET /api/usage 200 in 589ms
+ GET /api/projects 200 in 767ms
+ GET /api/projects 200 in 419ms
+ POST /api/media 200 in 1568ms
+ POST /api/render 500 in 24817ms
+ GET /lab 200 in 73ms
+ GET /api/usage 200 in 281ms
+ GET /api/projects 200 in 368ms
+ GET /api/projects 200 in 230ms
+ POST /api/media 200 in 1322ms
+ POST /api/render 500 in 24568ms
+ GET /api/usage 200 in 496ms
+ ✓ Compiled in 294ms (648 modules)
+ ✓ Compiled /api/usage in 114ms (421 modules)
+ GET /api/usage 200 in 658ms
+ ✓ Compiled /api/media in 87ms (423 modules)
+ POST /api/media 200 in 1497ms
+ ✓ Compiled /api/render in 166ms (430 modules)
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/53317692-df5d-4fed-8ab5-ca9e5d374d30.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/00af2257-dea9-4ab6-8497-f803ba1a9552.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/cf378649-c90b-4afd-a273-d5988e3023b4.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/0ed1cacd-08c8-4d11-9575-99da3672afec.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/f3db6aaf-5c62-4cd9-8a38-341f13215af6.mp3 -y -filter_complex 0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt]xfade=transition=fade:duration=0.6:offset=9.6[xf1];[xf1][bg2pt]xfade=transition=fade:duration=0.6:offset=9.6[xf2];[xf2][bg3pt]xfade=transition=fade:duration=0.6:offset=9.6[xf3];[xf3]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1fLvp8/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-q2I951/789cceec-cd84-41d0-87a6-19dd4d992b23.mp4
+ffmpeg error: ffmpeg was killed with signal SIGSEGV
+ POST /api/render 500 in 36269ms
+ GET /lab 200 in 141ms
+ ✓ Compiled /api/usage in 153ms (420 modules)
+ ✓ Compiled (424 modules)
+ GET /api/usage 200 in 465ms
+ GET /api/projects 200 in 797ms
+ GET /api/projects 200 in 338ms
+ ✓ Compiled /api/media in 52ms (426 modules)
+ POST /api/media 200 in 1247ms
+ ✓ Compiled /api/render in 54ms (432 modules)
+/Users/everett/Desktop/clipcatalyst-next/scripts/render.js:268
+  cmd.on('progress', p => process.stdout.write(`progress ${Math.round(p.percent||0)}%\r`));
+                        ^
+
+SyntaxError: Invalid or unexpected token
+    at wrapSafe (node:internal/modules/cjs/loader:1620:18)
+    at Module._compile (node:internal/modules/cjs/loader:1662:20)
+    at Object..js (node:internal/modules/cjs/loader:1820:10)
+    at Module.load (node:internal/modules/cjs/loader:1423:32)
+    at Function._load (node:internal/modules/cjs/loader:1246:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49
+
+Node.js v22.18.0
+ POST /api/render 500 in 35331ms
+ GET /lab 200 in 150ms
+ GET /api/usage 200 in 434ms
+ GET /api/projects 200 in 652ms
+ GET /api/projects 200 in 352ms
+ POST /api/media 200 in 1211ms
+/Users/everett/Desktop/clipcatalyst-next/scripts/render.js:265
+  cmd.on('progress', p => process.stdout.write(`progress ${Math.round(p.percent||0)}%\r`));
+                        ^
+
+SyntaxError: Invalid or unexpected token
+    at wrapSafe (node:internal/modules/cjs/loader:1620:18)
+    at Module._compile (node:internal/modules/cjs/loader:1662:20)
+    at Object..js (node:internal/modules/cjs/loader:1820:10)
+    at Module.load (node:internal/modules/cjs/loader:1423:32)
+    at Function._load (node:internal/modules/cjs/loader:1246:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49
+
+Node.js v22.18.0
+ POST /api/render 500 in 41286ms
+ GET /lab 200 in 84ms
+ GET /api/usage 200 in 523ms
+ GET /api/projects 200 in 564ms
+ GET /api/projects 200 in 350ms
+ POST /api/media 200 in 1742ms
+ GET /api/usage 200 in 257ms
+ POST /api/media 200 in 1147ms
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/92787034-8157-4add-9bfa-3ddb9e8ff276.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/349bab1a-7ce2-464f-aa4f-5ab5a2b1b940.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/28feafec-9336-45bf-9e9d-adc5fcc0f743.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/e42a150b-44b7-44ce-8715-b9c753b358b4.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/4bfcb0f3-0505-4c70-a988-e234cbd1e2f7.mp3 -y -filter_complex 0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Jkhafl/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -threads 1 -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/e85e1f0e-d534-472f-8426-6c1abfff7022.mp4
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with Apple clang version 13.1.6 (clang-1316.0.21.2.5)
+  configuration: --prefix=/Volumes/tempdisk/sw --extra-cflags=-fno-stack-check --arch=arm64 --cc=/usr/bin/clang --enable-gpl --enable-libvmaf --enable-libbluray --enable-libopenjpeg --enable-libopus --enable-libmp3lame --enable-libx264 --enable-libx265 --enable-libvpx --enable-libwebp --enable-libass --enable-libfreetype --enable-fontconfig --enable-libtheora --enable-libvorbis --enable-libsnappy --enable-libaom --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libkvazaar --enable-version3 --pkg-config-flags=--static --enable-ffplay --enable-postproc --enable-nonfree --enable-neon --enable-runtime-cpudetect --disable-indev=qtkit --disable-indev=x11grab_xcb
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/92787034-8157-4add-9bfa-3ddb9e8ff276.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-01T15:06:48.000000Z
+  Duration: 00:00:05.77, start: 0.000000, bitrate: 4718 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 4713 kb/s, 29.97 fps, 29.97 tbr, 30k tbn (default)
+    Metadata:
+      creation_time   : 2020-11-01T15:06:48.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #1, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/349bab1a-7ce2-464f-aa4f-5ab5a2b1b940.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-09T14:33:43.000000Z
+  Duration: 00:00:10.52, start: 0.000000, bitrate: 3555 kb/s
+  Stream #1:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 3301 kb/s, 24 fps, 24 tbr, 24 tbn (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+  Stream #1:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 253 kb/s (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Audio Handler
+      vendor_id       : [0][0][0][0]
+Input #2, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/28feafec-9336-45bf-9e9d-adc5fcc0f743.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-06-22T22:07:59.000000Z
+  Duration: 00:00:10.76, start: 0.000000, bitrate: 2486 kb/s
+  Stream #2:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2048, 2483 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-06-22T22:07:59.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #3, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/e42a150b-44b7-44ce-8715-b9c753b358b4.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-07-23T12:49:46.000000Z
+  Duration: 00:00:45.16, start: 0.000000, bitrate: 10824 kb/s
+  Stream #3:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1440x2732, 10822 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-07-23T12:49:46.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+[mp3 @ 0x12c6149a0] Estimating duration from bitrate, this may be inaccurate
+Input #4, mp3, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-kuVhxn/4bfcb0f3-0505-4c70-a988-e234cbd1e2f7.mp3':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Duration: 00:00:38.95, start: 0.000000, bitrate: 128 kb/s
+  Stream #4:0: Audio: mp3, 44100 Hz, mono, fltp, 128 kb/s
+[AVFilterGraph @ 0x600002018720] No option name near '1080:1920:force_original_aspect_ratio=decrease'
+[AVFilterGraph @ 0x600002018720] Error parsing a filter description around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Jkhafl/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+[AVFilterGraph @ 0x600002018720] Error parsing filterchain '0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Jkhafl/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]' around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Jkhafl/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+
+ffmpeg error: ffmpeg was killed with signal SIGSEGV
+ POST /api/render 500 in 52149ms
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/e45a0c32-3d41-456a-9dca-b7d5b7b9ab42.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/3d5db644-abc4-4690-997a-e78c99ca55dc.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/a9994f6b-d784-4aaf-8407-cf2b54612128.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/555c3f59-a431-4e32-8f50-6627b493b752.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/405535df-61b5-4596-8af1-efe1a50bb04a.mp3 -y -filter_complex 0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wos48f/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -threads 1 -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/e13ad90e-4ffe-4823-9738-ba3ef07463b3.mp4
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with Apple clang version 13.1.6 (clang-1316.0.21.2.5)
+  configuration: --prefix=/Volumes/tempdisk/sw --extra-cflags=-fno-stack-check --arch=arm64 --cc=/usr/bin/clang --enable-gpl --enable-libvmaf --enable-libbluray --enable-libopenjpeg --enable-libopus --enable-libmp3lame --enable-libx264 --enable-libx265 --enable-libvpx --enable-libwebp --enable-libass --enable-libfreetype --enable-fontconfig --enable-libtheora --enable-libvorbis --enable-libsnappy --enable-libaom --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libkvazaar --enable-version3 --pkg-config-flags=--static --enable-ffplay --enable-postproc --enable-nonfree --enable-neon --enable-runtime-cpudetect --disable-indev=qtkit --disable-indev=x11grab_xcb
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/e45a0c32-3d41-456a-9dca-b7d5b7b9ab42.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-01T15:06:48.000000Z
+  Duration: 00:00:05.77, start: 0.000000, bitrate: 4718 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 4713 kb/s, 29.97 fps, 29.97 tbr, 30k tbn (default)
+    Metadata:
+      creation_time   : 2020-11-01T15:06:48.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #1, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/3d5db644-abc4-4690-997a-e78c99ca55dc.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-09T14:33:43.000000Z
+  Duration: 00:00:10.52, start: 0.000000, bitrate: 3555 kb/s
+  Stream #1:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 3301 kb/s, 24 fps, 24 tbr, 24 tbn (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+  Stream #1:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 253 kb/s (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Audio Handler
+      vendor_id       : [0][0][0][0]
+Input #2, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/a9994f6b-d784-4aaf-8407-cf2b54612128.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-06-22T22:07:59.000000Z
+  Duration: 00:00:10.76, start: 0.000000, bitrate: 2486 kb/s
+  Stream #2:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2048, 2483 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-06-22T22:07:59.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #3, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/555c3f59-a431-4e32-8f50-6627b493b752.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-07-23T12:49:46.000000Z
+  Duration: 00:00:45.16, start: 0.000000, bitrate: 10824 kb/s
+  Stream #3:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1440x2732, 10822 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-07-23T12:49:46.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+[mp3 @ 0x119611080] Estimating duration from bitrate, this may be inaccurate
+Input #4, mp3, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-1DuyTp/405535df-61b5-4596-8af1-efe1a50bb04a.mp3':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Duration: 00:00:38.95, start: 0.000000, bitrate: 128 kb/s
+  Stream #4:0: Audio: mp3, 44100 Hz, mono, fltp, 128 kb/s
+[AVFilterGraph @ 0x6000033cc720] No option name near '1080:1920:force_original_aspect_ratio=decrease'
+[AVFilterGraph @ 0x6000033cc720] Error parsing a filter description around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wos48f/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+[AVFilterGraph @ 0x6000033cc720] Error parsing filterchain '0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wos48f/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]' around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,ass='/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wos48f/subs.ass',drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+
+ffmpeg error: ffmpeg was killed with signal SIGSEGV
+ POST /api/render 500 in 42104ms
+ ✓ Compiled in 302ms (648 modules)
+ ✓ Compiled /api/usage in 70ms (421 modules)
+ GET /api/usage 200 in 948ms
+ GET /lab 200 in 95ms
+ ✓ Compiled /api/projects in 44ms (424 modules)
+ GET /api/usage 200 in 330ms
+ GET /api/projects 200 in 640ms
+ GET /api/projects 200 in 261ms
+ ✓ Compiled /api/media in 130ms (426 modules)
+ POST /api/media 200 in 1383ms
+ ✓ Compiled /api/render in 190ms (432 modules)
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/acdd88f6-34fb-4346-98e3-f399c3320388.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/234ce894-aa21-4c3c-98d0-9ca0024f77ef.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/9767e815-a0e3-47cc-9f52-aa21d91d13a7.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/72a6448c-df0d-44d9-99cb-4ba9e754ef13.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/fc0611a3-0344-46b6-8c2f-2f74c57350bc.mp3 -y -filter_complex 0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -threads 1 -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/3af3122c-413e-4d5c-ab75-e7aed386beb0.mp4
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with Apple clang version 13.1.6 (clang-1316.0.21.2.5)
+  configuration: --prefix=/Volumes/tempdisk/sw --extra-cflags=-fno-stack-check --arch=arm64 --cc=/usr/bin/clang --enable-gpl --enable-libvmaf --enable-libbluray --enable-libopenjpeg --enable-libopus --enable-libmp3lame --enable-libx264 --enable-libx265 --enable-libvpx --enable-libwebp --enable-libass --enable-libfreetype --enable-fontconfig --enable-libtheora --enable-libvorbis --enable-libsnappy --enable-libaom --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libkvazaar --enable-version3 --pkg-config-flags=--static --enable-ffplay --enable-postproc --enable-nonfree --enable-neon --enable-runtime-cpudetect --disable-indev=qtkit --disable-indev=x11grab_xcb
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/acdd88f6-34fb-4346-98e3-f399c3320388.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-01T15:06:48.000000Z
+  Duration: 00:00:05.77, start: 0.000000, bitrate: 4718 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 4713 kb/s, 29.97 fps, 29.97 tbr, 30k tbn (default)
+    Metadata:
+      creation_time   : 2020-11-01T15:06:48.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #1, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/234ce894-aa21-4c3c-98d0-9ca0024f77ef.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-09T14:33:43.000000Z
+  Duration: 00:00:10.52, start: 0.000000, bitrate: 3555 kb/s
+  Stream #1:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 3301 kb/s, 24 fps, 24 tbr, 24 tbn (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+  Stream #1:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 253 kb/s (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Audio Handler
+      vendor_id       : [0][0][0][0]
+Input #2, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/9767e815-a0e3-47cc-9f52-aa21d91d13a7.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-06-22T22:07:59.000000Z
+  Duration: 00:00:10.76, start: 0.000000, bitrate: 2486 kb/s
+  Stream #2:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2048, 2483 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-06-22T22:07:59.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #3, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/72a6448c-df0d-44d9-99cb-4ba9e754ef13.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-07-23T12:49:46.000000Z
+  Duration: 00:00:45.16, start: 0.000000, bitrate: 10824 kb/s
+  Stream #3:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1440x2732, 10822 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-07-23T12:49:46.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+[mp3 @ 0x131e111a0] Estimating duration from bitrate, this may be inaccurate
+Input #4, mp3, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-e85kRr/fc0611a3-0344-46b6-8c2f-2f74c57350bc.mp3':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Duration: 00:00:38.95, start: 0.000000, bitrate: 128 kb/s
+  Stream #4:0: Audio: mp3, 44100 Hz, mono, fltp, 128 kb/s
+[AVFilterGraph @ 0x6000030c4000] No option name near '1080:1920:force_original_aspect_ratio=decrease'
+[AVFilterGraph @ 0x6000030c4000] Error parsing a filter description around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+[AVFilterGraph @ 0x6000030c4000] Error parsing filterchain '0:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]' around: ,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];1:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];2:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];3:vscale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v]
+
+ffmpeg error: ffmpeg was killed with signal SIGSEGV
+ POST /api/render 500 in 31853ms
+ GET /lab 200 in 134ms
+ GET /api/usage 200 in 144ms
+ GET /api/usage 200 in 150ms
+ GET /api/projects 200 in 298ms
+ GET /api/projects 200 in 208ms
+ GET /api/usage 200 in 247ms
+ GET /api/projects 200 in 377ms
+ GET /lab 200 in 60ms
+ GET /api/usage 200 in 317ms
+ GET /api/projects 200 in 503ms
+ GET /api/projects 200 in 250ms
+ POST /api/media 200 in 1336ms
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/e6f26d91-d451-45cd-b38b-862fecfa2170.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/de9a9192-83d5-4217-8849-6d9ba3399c60.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/e0a11d5a-88f3-4517-92a8-fec22adcace8.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/7417cc07-31ef-4714-b047-95f4785d7175.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/cd25596c-a7e0-4469-bb34-7ab2f3888834.mp3 -y -filter_complex [0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];[1:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];[2:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];[3:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -threads 1 -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/142baf05-c5e0-4ae2-9f4d-e1dfb3aad7ee.mp4
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with Apple clang version 13.1.6 (clang-1316.0.21.2.5)
+  configuration: --prefix=/Volumes/tempdisk/sw --extra-cflags=-fno-stack-check --arch=arm64 --cc=/usr/bin/clang --enable-gpl --enable-libvmaf --enable-libbluray --enable-libopenjpeg --enable-libopus --enable-libmp3lame --enable-libx264 --enable-libx265 --enable-libvpx --enable-libwebp --enable-libass --enable-libfreetype --enable-fontconfig --enable-libtheora --enable-libvorbis --enable-libsnappy --enable-libaom --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libkvazaar --enable-version3 --pkg-config-flags=--static --enable-ffplay --enable-postproc --enable-nonfree --enable-neon --enable-runtime-cpudetect --disable-indev=qtkit --disable-indev=x11grab_xcb
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/e6f26d91-d451-45cd-b38b-862fecfa2170.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-01T15:06:48.000000Z
+  Duration: 00:00:05.77, start: 0.000000, bitrate: 4718 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 4713 kb/s, 29.97 fps, 29.97 tbr, 30k tbn (default)
+    Metadata:
+      creation_time   : 2020-11-01T15:06:48.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #1, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/de9a9192-83d5-4217-8849-6d9ba3399c60.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-09T14:33:43.000000Z
+  Duration: 00:00:10.52, start: 0.000000, bitrate: 3555 kb/s
+  Stream #1:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 3301 kb/s, 24 fps, 24 tbr, 24 tbn (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+  Stream #1:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 253 kb/s (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Audio Handler
+      vendor_id       : [0][0][0][0]
+Input #2, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/e0a11d5a-88f3-4517-92a8-fec22adcace8.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-06-22T22:07:59.000000Z
+  Duration: 00:00:10.76, start: 0.000000, bitrate: 2486 kb/s
+  Stream #2:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2048, 2483 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-06-22T22:07:59.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #3, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/7417cc07-31ef-4714-b047-95f4785d7175.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-07-23T12:49:46.000000Z
+  Duration: 00:00:45.16, start: 0.000000, bitrate: 10824 kb/s
+  Stream #3:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1440x2732, 10822 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-07-23T12:49:46.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+[mp3 @ 0x145e0bff0] Estimating duration from bitrate, this may be inaccurate
+Input #4, mp3, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/cd25596c-a7e0-4469-bb34-7ab2f3888834.mp3':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Duration: 00:00:38.95, start: 0.000000, bitrate: 128 kb/s
+  Stream #4:0: Audio: mp3, 44100 Hz, mono, fltp, 128 kb/s
+Stream mapping:
+  Stream #0:0 (h264) -> scale:default (graph 0)
+  Stream #1:0 (h264) -> scale:default (graph 0)
+  Stream #2:0 (h264) -> scale:default (graph 0)
+  Stream #3:0 (h264) -> scale:default (graph 0)
+  drawbox:default (graph 0) -> Stream #0:0 (libx264)
+  Stream #4:0 -> #0:1 (mp3 (mp3float) -> aac (native))
+Press [q] to stop, [?] for help
+[libx264 @ 0x145f07c20] using cpu capabilities: ARMv8 NEON
+[libx264 @ 0x145f07c20] profile High, level 4.0, 4:2:0, 8-bit
+[libx264 @ 0x145f07c20] 264 - core 164 r3075 66a5bc1 - H.264/MPEG-4 AVC codec - Copyleft 2003-2021 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=1 lookahead_threads=1 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=25 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=20.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/142baf05-c5e0-4ae2-9f4d-e1dfb3aad7ee.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    encoder         : Lavf60.3.100
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, q=2-31, 30 fps, 15360 tbn
+    Metadata:
+      encoder         : Lavc60.3.100 libx264
+    Side data:
+      cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+  Stream #0:1: Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, mono, fltp, 192 kb/s
+    Metadata:
+      encoder         : Lavc60.3.100 aac
+frame=    0 fps=0.0 q=0.0 size=       0kB time=-577014:32:22.77 bitrate=  -0.0kbits/s speed=N/A
+progress -35985665961%
+frame=    6 fps=0.0 q=26.0 size=       0kB time=00:00:00.10 bitrate=   3.8kbits/s speed=0.146x
+progress 2%
+frame=   16 fps= 13 q=26.0 size=       0kB time=00:00:00.43 bitrate=   0.9kbits/s speed=0.354x
+progress 7%
+frame=   27 fps= 16 q=26.0 size=       0kB time=00:00:00.80 bitrate=   0.5kbits/s speed=0.462x
+progress 14%
+frame=   39 fps= 17 q=26.0 size=       0kB time=00:00:01.20 bitrate=   0.3kbits/s speed=0.534x
+progress 21%
+frame=   51 fps= 19 q=26.0 size=       0kB time=00:00:01.60 bitrate=   0.2kbits/s speed=0.581x
+progress 28%
+frame=   61 fps= 19 q=26.0 size=       0kB time=00:00:01.93 bitrate=   0.2kbits/s speed=0.594x
+progress 33%
+frame=   73 fps= 19 q=26.0 size=       0kB time=00:00:02.33 bitrate=   0.2kbits/s speed=0.618x
+progress 40%
+frame=   85 fps= 20 q=26.0 size=       0kB time=00:00:02.73 bitrate=   0.1kbits/s speed=0.638x
+progress 47%
+frame=   96 fps= 20 q=26.0 size=       0kB time=00:00:03.10 bitrate=   0.1kbits/s speed=0.64x
+progress 54%
+frame=  107 fps= 20 q=26.0 size=       0kB time=00:00:03.46 bitrate=   0.1kbits/s speed=0.644x
+progress 60%
+frame=  120 fps= 20 q=26.0 size=       0kB time=00:00:03.90 bitrate=   0.1kbits/s speed=0.66x
+progress 68%
+frame=  129 fps= 20 q=26.0 size=       0kB time=00:00:04.20 bitrate=   0.1kbits/s speed=0.655x
+progress 73%
+frame=  140 fps= 20 q=26.0 size=       0kB time=00:00:04.56 bitrate=   0.1kbits/s speed=0.658x
+progress 79%
+frame=  149 fps= 20 q=26.0 size=       0kB time=00:00:04.86 bitrate=   0.1kbits/s speed=0.654x
+progress 84%
+frame=  159 fps= 20 q=26.0 size=       0kB time=00:00:05.20 bitrate=   0.1kbits/s speed=0.654x
+progress 90%
+frame=  169 fps= 20 q=26.0 size=       0kB time=00:00:05.53 bitrate=   0.1kbits/s speed=0.655x
+progress 96%
+frame=  182 fps= 20 q=26.0 size=       0kB time=00:00:05.96 bitrate=   0.1kbits/s speed=0.665x
+progress 103%
+frame=  196 fps= 21 q=26.0 size=       0kB time=00:00:06.43 bitrate=   0.1kbits/s speed=0.675x
+progress 111%
+frame=  212 fps= 21 q=26.0 size=     256kB time=00:00:06.96 bitrate= 301.1kbits/s speed=0.69x
+progress 121%
+frame=  228 fps= 21 q=26.0 size=     512kB time=00:00:07.50 bitrate= 559.3kbits/s speed=0.707x
+progress 130%
+frame=  244 fps= 22 q=26.0 size=     768kB time=00:00:08.03 bitrate= 783.2kbits/s speed=0.721x
+progress 139%
+frame=  261 fps= 22 q=26.0 size=    1024kB time=00:00:08.60 bitrate= 975.5kbits/s speed=0.737x
+progress 149%
+frame=  275 fps= 23 q=26.0 size=    1024kB time=00:00:09.06 bitrate= 925.3kbits/s speed=0.744x
+progress 157%
+frame=  293 fps= 23 q=26.0 size=    1280kB time=00:00:09.66 bitrate=1084.8kbits/s speed=0.76x
+progress 167%
+frame=  309 fps= 23 q=26.0 size=    1536kB time=00:00:10.20 bitrate=1233.7kbits/s speed=0.77x
+progress 177%
+frame=  326 fps= 24 q=26.0 size=    1792kB time=00:00:10.76 bitrate=1363.5kbits/s speed=0.782x
+progress 186%
+frame=  344 fps= 24 q=26.0 size=    2304kB time=00:00:11.36 bitrate=1660.5kbits/s speed=0.797x
+progress 197%
+frame=  359 fps= 24 q=26.0 size=    2304kB time=00:00:11.86 bitrate=1590.6kbits/s speed=0.803x
+progress 205%
+frame=  376 fps= 25 q=26.0 size=    2560kB time=00:00:12.43 bitrate=1686.7kbits/s speed=0.813x
+progress 215%
+frame=  393 fps= 25 q=26.0 size=    3072kB time=00:00:13.00 bitrate=1935.9kbits/s speed=0.822x
+progress 225%
+ POST /api/media 200 in 1221ms
+frame=  410 fps= 25 q=26.0 size=    3328kB time=00:00:13.56 bitrate=2009.6kbits/s speed=0.831x
+progress 235%
+frame=  423 fps= 25 q=26.0 size=    3584kB time=00:00:14.03 bitrate=2092.2kbits/s speed=0.833x
+progress 243%
+ GET /lab 200 in 33ms
+ POST /api/render 200 in 1008ms
+ POST /api/render 200 in 59039ms
+frame=  440 fps= 25 q=26.0 size=    3584kB time=00:00:14.56 bitrate=2015.6kbits/s speed=0.836x
+progress 252%
+ GET /api/usage 200 in 252ms
+ GET /api/projects 200 in 452ms
+frame=  456 fps= 25 q=26.0 size=    3840kB time=00:00:15.10 bitrate=2083.3kbits/s speed=0.84x
+progress 262%
+ GET /api/projects 200 in 322ms
+frame=  472 fps= 26 q=26.0 size=    4096kB time=00:00:15.63 bitrate=2146.4kbits/s speed=0.846x
+progress 271%
+frame=  484 fps= 25 q=26.0 size=    4352kB time=00:00:16.03 bitrate=2223.6kbits/s speed=0.841x
+progress 278%
+frame=  493 fps= 25 q=26.0 size=    4352kB time=00:00:16.33 bitrate=2182.8kbits/s speed=0.834x
+progress 283%
+frame=  503 fps= 25 q=26.0 size=    4352kB time=00:00:16.66 bitrate=2139.1kbits/s speed=0.826x
+progress 289%
+frame=  512 fps= 25 q=26.0 size=    4352kB time=00:00:16.96 bitrate=2101.3kbits/s speed=0.82x
+progress 294%
+frame=  521 fps= 25 q=26.0 size=    4352kB time=00:00:17.26 bitrate=2064.8kbits/s speed=0.813x
+progress 299%
+frame=  530 fps= 24 q=26.0 size=    4608kB time=00:00:17.56 bitrate=2148.9kbits/s speed=0.805x
+progress 304%
+frame=  540 fps= 24 q=26.0 size=    4608kB time=00:00:17.90 bitrate=2108.9kbits/s speed=0.799x
+progress 310%
+frame=  550 fps= 24 q=26.0 size=    4608kB time=00:00:18.23 bitrate=2070.3kbits/s speed=0.794x
+progress 316%
+frame=  560 fps= 24 q=26.0 size=    4608kB time=00:00:18.56 bitrate=2033.2kbits/s speed=0.789x
+progress 322%
+frame=  570 fps= 24 q=26.0 size=    4608kB time=00:00:18.90 bitrate=1997.3kbits/s speed=0.786x
+progress 327%
+frame=  580 fps= 24 q=26.0 size=    4864kB time=00:00:19.23 bitrate=2071.7kbits/s speed=0.782x
+progress 333%
+frame=  590 fps= 24 q=26.0 size=    4864kB time=00:00:19.56 bitrate=2036.4kbits/s speed=0.78x
+progress 339%
+frame=  600 fps= 23 q=26.0 size=    4864kB time=00:00:19.90 bitrate=2002.3kbits/s speed=0.775x
+progress 345%
+frame=  610 fps= 23 q=26.0 size=    4864kB time=00:00:20.23 bitrate=1969.3kbits/s speed=0.773x
+progress 350%
+frame=  619 fps= 23 q=26.0 size=    5120kB time=00:00:20.53 bitrate=2042.7kbits/s speed=0.769x
+progress 356%
+frame=  628 fps= 23 q=26.0 size=    5120kB time=00:00:20.83 bitrate=2013.3kbits/s speed=0.766x
+progress 361%
+frame=  638 fps= 23 q=26.0 size=    5888kB time=00:00:21.16 bitrate=2278.8kbits/s speed=0.763x
+progress 367%
+frame=  648 fps= 23 q=26.0 size=    5888kB time=00:00:21.50 bitrate=2243.5kbits/s speed=0.761x
+progress 372%
+frame=  658 fps= 23 q=26.0 size=    5888kB time=00:00:21.83 bitrate=2209.2kbits/s speed=0.759x
+progress 378%
+frame=  667 fps= 23 q=26.0 size=    5888kB time=00:00:22.13 bitrate=2179.3kbits/s speed=0.756x
+progress 383%
+frame=  676 fps= 23 q=26.0 size=    5888kB time=00:00:22.43 bitrate=2150.1kbits/s speed=0.753x
+progress 389%
+frame=  685 fps= 23 q=26.0 size=    6144kB time=00:00:22.73 bitrate=2214.0kbits/s speed=0.75x
+progress 394%
+frame=  694 fps= 23 q=26.0 size=    6144kB time=00:00:23.03 bitrate=2185.2kbits/s speed=0.748x
+progress 399%
+frame=  703 fps= 22 q=26.0 size=    6144kB time=00:00:23.33 bitrate=2157.1kbits/s speed=0.745x
+progress 404%
+frame=  712 fps= 22 q=26.0 size=    6400kB time=00:00:23.63 bitrate=2218.4kbits/s speed=0.742x
+progress 409%
+frame=  722 fps= 22 q=26.0 size=    6400kB time=00:00:23.96 bitrate=2187.6kbits/s speed=0.74x
+progress 415%
+frame=  733 fps= 22 q=26.0 size=    6656kB time=00:00:24.33 bitrate=2240.8kbits/s speed=0.739x
+progress 421%
+frame=  742 fps= 22 q=26.0 size=    6656kB time=00:00:24.63 bitrate=2213.5kbits/s speed=0.737x
+progress 427%
+frame=  751 fps= 22 q=26.0 size=    6912kB time=00:00:24.93 bitrate=2271.0kbits/s speed=0.734x
+progress 432%
+frame=  760 fps= 22 q=26.0 size=    6912kB time=00:00:25.23 bitrate=2244.0kbits/s speed=0.731x
+progress 437%
+frame=  770 fps= 22 q=26.0 size=    7168kB time=00:00:25.56 bitrate=2296.8kbits/s speed=0.729x
+progress 443%
+frame=  780 fps= 22 q=26.0 size=    7168kB time=00:00:25.90 bitrate=2267.2kbits/s speed=0.727x
+progress 449%
+frame=  787 fps= 22 q=26.0 size=    7168kB time=00:00:26.13 bitrate=2247.0kbits/s speed=0.723x
+progress 453%
+frame=  792 fps= 22 q=26.0 size=    7424kB time=00:00:26.30 bitrate=2312.5kbits/s speed=0.714x
+progress 456%
+frame=  797 fps= 21 q=26.0 size=    7424kB time=00:00:26.46 bitrate=2297.9kbits/s speed=0.708x
+progress 458%
+frame=  801 fps= 21 q=26.0 size=    7424kB time=00:00:26.60 bitrate=2286.4kbits/s speed=0.699x
+progress 461%
+frame=  806 fps= 21 q=26.0 size=    7424kB time=00:00:26.76 bitrate=2272.1kbits/s speed=0.692x
+progress 464%
+frame=  811 fps= 21 q=26.0 size=    7424kB time=00:00:26.93 bitrate=2258.1kbits/s speed=0.685x
+progress 467%
+frame=  816 fps= 20 q=26.0 size=    7680kB time=00:00:27.10 bitrate=2321.6kbits/s speed=0.678x
+progress 469%
+frame=  821 fps= 20 q=26.0 size=    7680kB time=00:00:27.26 bitrate=2307.4kbits/s speed=0.672x
+progress 472%
+frame=  824 fps= 20 q=26.0 size=    7680kB time=00:00:27.36 bitrate=2299.0kbits/s speed=0.666x
+progress 474%
+frame=  828 fps= 20 q=26.0 size=    7680kB time=00:00:27.50 bitrate=2287.8kbits/s speed=0.661x
+progress 476%
+frame=  833 fps= 20 q=26.0 size=    7680kB time=00:00:27.66 bitrate=2274.0kbits/s speed=0.656x
+progress 479%
+frame=  836 fps= 20 q=26.0 size=    7936kB time=00:00:27.76 bitrate=2341.4kbits/s speed=0.65x
+progress 481%
+frame=  840 fps= 19 q=26.0 size=    7936kB time=00:00:27.90 bitrate=2330.2kbits/s speed=0.645x
+progress 483%
+frame=  845 fps= 19 q=26.0 size=    7936kB time=00:00:28.06 bitrate=2316.3kbits/s speed=0.639x
+progress 486%
+ffmpeg: ffmpeg -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/18c315b8-e889-43e4-a5ec-78a2e480b507.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/c5b95abd-1b8e-4551-9dec-cef4cca532fa.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/81d26f11-3116-47ae-b037-f73fa33d7ce1.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/ca43f441-6ffe-401c-a2fa-8901c541daeb.mp4 -i /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/6d523f7c-d8a2-4d55-b120-a1e9d93b8e2a.mp3 -y -filter_complex [0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg0p];[1:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg1p];[2:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg2p];[3:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,fps=30,format=yuv420p[bg3p];[bg0p]trim=duration=10.2,setpts=PTS-STARTPTS[bg0pt];[bg1p]trim=duration=10.2,setpts=PTS-STARTPTS[bg1pt];[bg2p]trim=duration=10.2,setpts=PTS-STARTPTS[bg2pt];[bg3p]trim=duration=10.2,setpts=PTS-STARTPTS[bg3pt];[bg0pt][bg1pt][bg2pt][bg3pt]concat=n=4:v=1:a=0[vcat];[vcat]pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,null,drawbox=x=0:y=24:w='(1080*t)/39':h=8:color=white@0.9:t=fill[v] -map [v] -map 4:a -c:v libx264 -preset medium -crf 20 -pix_fmt yuv420p -c:a aac -b:a 192k -threads 1 -shortest /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/507ba2ed-0ac2-420e-89ac-7690b14e9b7e.mp4
+ffmpeg version 6.0 Copyright (c) 2000-2023 the FFmpeg developers
+  built with Apple clang version 13.1.6 (clang-1316.0.21.2.5)
+  configuration: --prefix=/Volumes/tempdisk/sw --extra-cflags=-fno-stack-check --arch=arm64 --cc=/usr/bin/clang --enable-gpl --enable-libvmaf --enable-libbluray --enable-libopenjpeg --enable-libopus --enable-libmp3lame --enable-libx264 --enable-libx265 --enable-libvpx --enable-libwebp --enable-libass --enable-libfreetype --enable-fontconfig --enable-libtheora --enable-libvorbis --enable-libsnappy --enable-libaom --enable-libvidstab --enable-libzimg --enable-libsvtav1 --enable-libkvazaar --enable-version3 --pkg-config-flags=--static --enable-ffplay --enable-postproc --enable-nonfree --enable-neon --enable-runtime-cpudetect --disable-indev=qtkit --disable-indev=x11grab_xcb
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/18c315b8-e889-43e4-a5ec-78a2e480b507.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-01T15:06:48.000000Z
+  Duration: 00:00:05.77, start: 0.000000, bitrate: 4718 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 4713 kb/s, 29.97 fps, 29.97 tbr, 30k tbn (default)
+    Metadata:
+      creation_time   : 2020-11-01T15:06:48.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #1, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/c5b95abd-1b8e-4551-9dec-cef4cca532fa.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2020-11-09T14:33:43.000000Z
+  Duration: 00:00:10.52, start: 0.000000, bitrate: 3555 kb/s
+  Stream #1:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, 3301 kb/s, 24 fps, 24 tbr, 24 tbn (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+  Stream #1:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 253 kb/s (default)
+    Metadata:
+      creation_time   : 2020-11-09T14:33:43.000000Z
+      handler_name    : L-SMASH Audio Handler
+      vendor_id       : [0][0][0][0]
+Input #2, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/81d26f11-3116-47ae-b037-f73fa33d7ce1.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-06-22T22:07:59.000000Z
+  Duration: 00:00:10.76, start: 0.000000, bitrate: 2486 kb/s
+  Stream #2:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x2048, 2483 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-06-22T22:07:59.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+Input #3, mov,mp4,m4a,3gp,3g2,mj2, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/ca43f441-6ffe-401c-a2fa-8901c541daeb.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    creation_time   : 2021-07-23T12:49:46.000000Z
+  Duration: 00:00:45.16, start: 0.000000, bitrate: 10824 kb/s
+  Stream #3:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1440x2732, 10822 kb/s, 25 fps, 25 tbr, 25 tbn (default)
+    Metadata:
+      creation_time   : 2021-07-23T12:49:46.000000Z
+      handler_name    : L-SMASH Video Handler
+      vendor_id       : [0][0][0][0]
+      encoder         : AVC Coding
+[mp3 @ 0x126712600] Estimating duration from bitrate, this may be inaccurate
+Input #4, mp3, from '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/6d523f7c-d8a2-4d55-b120-a1e9d93b8e2a.mp3':
+  Metadata:
+    encoder         : Lavf60.16.100
+  Duration: 00:00:38.95, start: 0.000000, bitrate: 128 kb/s
+  Stream #4:0: Audio: mp3, 44100 Hz, mono, fltp, 128 kb/s
+Stream mapping:
+  Stream #0:0 (h264) -> scale:default (graph 0)
+  Stream #1:0 (h264) -> scale:default (graph 0)
+  Stream #2:0 (h264) -> scale:default (graph 0)
+  Stream #3:0 (h264) -> scale:default (graph 0)
+  drawbox:default (graph 0) -> Stream #0:0 (libx264)
+  Stream #4:0 -> #0:1 (mp3 (mp3float) -> aac (native))
+Press [q] to stop, [?] for help
+[libx264 @ 0x1278053b0] using cpu capabilities: ARMv8 NEON
+[libx264 @ 0x1278053b0] profile High, level 4.0, 4:2:0, 8-bit
+[libx264 @ 0x1278053b0] 264 - core 164 r3075 66a5bc1 - H.264/MPEG-4 AVC codec - Copyleft 2003-2021 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=1 lookahead_threads=1 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=25 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=20.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to '/var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/507ba2ed-0ac2-420e-89ac-7690b14e9b7e.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42mp41isomavc1
+    encoder         : Lavf60.3.100
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 1080x1920, q=2-31, 30 fps, 15360 tbn
+    Metadata:
+      encoder         : Lavc60.3.100 libx264
+    Side data:
+      cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+  Stream #0:1: Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, mono, fltp, 192 kb/s
+    Metadata:
+      encoder         : Lavc60.3.100 aac
+frame=    0 fps=0.0 q=0.0 size=       0kB time=-577014:32:22.77 bitrate=  -0.0kbits/s speed=N/A
+progress -35985665961%
+frame=  848 fps= 19 q=26.0 size=    7936kB time=00:00:28.16 bitrate=2308.1kbits/s speed=0.632x
+progress 488%
+frame=    5 fps=0.0 q=26.0 size=       0kB time=00:00:00.06 bitrate=   5.8kbits/s speed=0.097x
+progress 1%
+frame=  852 fps= 19 q=26.0 size=    7936kB time=00:00:28.30 bitrate=2297.2kbits/s speed=0.628x
+progress 490%
+frame=   14 fps= 12 q=26.0 size=       0kB time=00:00:00.36 bitrate=   1.0kbits/s speed=0.308x
+progress 6%
+frame=  856 fps= 19 q=26.0 size=    7936kB time=00:00:28.43 bitrate=2286.5kbits/s speed=0.624x
+progress 493%
+frame=   24 fps= 13 q=26.0 size=       0kB time=00:00:00.70 bitrate=   0.5kbits/s speed=0.388x
+progress 12%
+frame=  859 fps= 19 q=26.0 size=    7936kB time=00:00:28.53 bitrate=2278.5kbits/s speed=0.618x
+progress 494%
+frame=   35 fps= 15 q=26.0 size=       0kB time=00:00:01.06 bitrate=   0.4kbits/s speed=0.459x
+progress 18%
+frame=  863 fps= 18 q=26.0 size=    8192kB time=00:00:28.66 bitrate=2341.0kbits/s speed=0.614x
+progress 496%
+frame=   46 fps= 16 q=26.0 size=       0kB time=00:00:01.43 bitrate=   0.3kbits/s speed=0.505x
+progress 25%
+frame=   54 fps= 16 q=26.0 size=       0kB time=00:00:01.70 bitrate=   0.2kbits/s speed=0.509x
+progress 29%
+frame=  866 fps= 18 q=26.0 size=    8192kB time=00:00:28.76 bitrate=2332.9kbits/s speed=0.607x
+progress 498%
+frame=   64 fps= 17 q=26.0 size=       0kB time=00:00:02.03 bitrate=   0.2kbits/s speed=0.527x
+progress 35%
+frame=  870 fps= 18 q=26.0 size=    8192kB time=00:00:28.90 bitrate=2322.1kbits/s speed=0.603x
+progress 501%
+frame=   75 fps= 17 q=26.0 size=       0kB time=00:00:02.40 bitrate=   0.2kbits/s speed=0.546x
+progress 42%
+frame=  875 fps= 18 q=26.0 size=    8192kB time=00:00:29.06 bitrate=2308.8kbits/s speed=0.599x
+progress 503%
+frame=   84 fps= 17 q=26.0 size=       0kB time=00:00:02.70 bitrate=   0.1kbits/s speed=0.549x
+progress 47%
+frame=  878 fps= 18 q=26.0 size=    8192kB time=00:00:29.16 bitrate=2300.9kbits/s speed=0.592x
+progress 505%
+frame=   92 fps= 17 q=26.0 size=       0kB time=00:00:02.96 bitrate=   0.1kbits/s speed=0.545x
+progress 51%
+frame=  882 fps= 18 q=26.0 size=    8192kB time=00:00:29.30 bitrate=2290.4kbits/s speed=0.588x
+progress 508%
+frame=  101 fps= 17 q=26.0 size=       0kB time=00:00:03.26 bitrate=   0.1kbits/s speed=0.549x
+progress 56%
+frame=  111 fps= 17 q=26.0 size=       0kB time=00:00:03.60 bitrate=   0.1kbits/s speed=0.557x
+progress 62%
+frame=  887 fps= 18 q=26.0 size=    8448kB time=00:00:29.50 bitrate=2346.0kbits/s speed=0.585x
+progress 511%
+frame=  891 fps= 17 q=26.0 size=    8448kB time=00:00:29.60 bitrate=2338.1kbits/s speed=0.581x
+progress 513%
+frame=  121 fps= 17 q=26.0 size=       0kB time=00:00:03.93 bitrate=   0.1kbits/s speed=0.565x
+progress 68%
+frame=  894 fps= 17 q=23.0 size=    8448kB time=00:00:29.70 bitrate=2330.2kbits/s speed=0.577x
+progress 515%
+frame=  131 fps= 17 q=26.0 size=       0kB time=00:00:04.26 bitrate=   0.1kbits/s speed=0.57x
+progress 74%
+frame=  899 fps= 17 q=26.0 size=    8448kB time=00:00:29.86 bitrate=2317.2kbits/s speed=0.574x
+progress 517%
+frame=  141 fps= 17 q=26.0 size=       0kB time=00:00:04.63 bitrate=   0.1kbits/s speed=0.573x
+progress 80%
+frame=  903 fps= 17 q=26.0 size=    8448kB time=00:00:30.00 bitrate=2306.9kbits/s speed=0.571x
+progress 520%
+frame=  152 fps= 18 q=26.0 size=       0kB time=00:00:04.96 bitrate=   0.1kbits/s speed=0.578x
+progress 86%
+frame=  908 fps= 17 q=26.0 size=    8704kB time=00:00:30.16 bitrate=2363.7kbits/s speed=0.568x
+progress 522%
+frame=  161 fps= 18 q=26.0 size=       0kB time=00:00:05.26 bitrate=   0.1kbits/s speed=0.578x
+progress 91%
+frame=  914 fps= 17 q=26.0 size=    8704kB time=00:00:30.36 bitrate=2348.1kbits/s speed=0.566x
+progress 526%
+frame=  173 fps= 18 q=23.0 size=       0kB time=00:00:05.66 bitrate=   0.1kbits/s speed=0.585x
+progress 98%
+frame=  182 fps= 18 q=26.0 size=       0kB time=00:00:05.96 bitrate=   0.1kbits/s speed=0.585x
+progress 103%
+frame=  918 fps= 17 q=26.0 size=    8704kB time=00:00:30.50 bitrate=2337.8kbits/s speed=0.562x
+progress 528%
+ GET /api/usage 200 in 561ms
+frame=  193 fps= 18 q=26.0 size=       0kB time=00:00:06.33 bitrate=   0.1kbits/s speed=0.59x
+progress 110%
+frame=  923 fps= 17 q=26.0 size=    8704kB time=00:00:30.66 bitrate=2325.1kbits/s speed=0.559x
+progress 531%
+frame=  208 fps= 18 q=26.0 size=       0kB time=00:00:06.83 bitrate=   0.1kbits/s speed=0.606x
+progress 118%
+frame=  927 fps= 17 q=26.0 size=    8704kB time=00:00:30.80 bitrate=2315.1kbits/s speed=0.556x
+progress 534%
+frame=  222 fps= 19 q=26.0 size=     512kB time=00:00:07.30 bitrate= 574.6kbits/s speed=0.619x
+progress 126%
+frame=  932 fps= 17 q=26.0 size=    8960kB time=00:00:30.96 bitrate=2370.3kbits/s speed=0.554x
+progress 536%
+frame=  236 fps= 19 q=26.0 size=     768kB time=00:00:07.76 bitrate= 810.1kbits/s speed=0.631x
+progress 134%
+frame=  938 fps= 17 q=26.0 size=    8960kB time=00:00:31.16 bitrate=2355.1kbits/s speed=0.551x
+progress 540%
+frame=  252 fps= 20 q=26.0 size=     768kB time=00:00:08.30 bitrate= 758.1kbits/s speed=0.647x
+progress 144%
+frame=  944 fps= 17 q=26.0 size=    8960kB time=00:00:31.36 bitrate=2340.1kbits/s speed=0.549x
+progress 543%
+frame=  266 fps= 20 q=26.0 size=    1024kB time=00:00:08.76 bitrate= 956.9kbits/s speed=0.657x
+progress 152%
+frame=  950 fps= 16 q=26.0 size=    9216kB time=00:00:31.56 bitrate=2391.7kbits/s speed=0.547x
+progress 547%
+frame=  282 fps= 20 q=26.0 size=    1280kB time=00:00:09.30 bitrate=1127.5kbits/s speed=0.671x
+progress 161%
+frame=  955 fps= 16 q=26.0 size=    9216kB time=00:00:31.73 bitrate=2379.1kbits/s speed=0.545x
+progress 550%
+frame=  298 fps= 21 q=26.0 size=    1536kB time=00:00:09.83 bitrate=1279.7kbits/s speed=0.684x
+progress 170%
+frame=  961 fps= 16 q=26.0 size=    9216kB time=00:00:31.93 bitrate=2364.2kbits/s speed=0.543x
+progress 553%
+frame=  314 fps= 21 q=26.0 size=    1792kB time=00:00:10.36 bitrate=1416.1kbits/s speed=0.696x
+progress 179%
+frame=  966 fps= 16 q=26.0 size=    9216kB time=00:00:32.10 bitrate=2352.0kbits/s speed=0.541x
+progress 556%
+frame=  331 fps= 21 q=26.0 size=    2048kB time=00:00:10.93 bitrate=1534.5kbits/s speed=0.71x
+progress 189%
+frame=  971 fps= 16 q=26.0 size=    9472kB time=00:00:32.26 bitrate=2404.8kbits/s speed=0.539x
+progress 559%
+frame=  349 fps= 22 q=26.0 size=    2304kB time=00:00:11.53 bitrate=1636.5kbits/s speed=0.724x
+progress 200%
+frame=  365 fps= 22 q=26.0 size=    2560kB time=00:00:12.06 bitrate=1738.0kbits/s speed=0.732x
+progress 209%
+frame=  978 fps= 16 q=26.0 size=    9472kB time=00:00:32.50 bitrate=2387.5kbits/s speed=0.537x
+progress 563%
+frame=  382 fps= 22 q=26.0 size=    2560kB time=00:00:12.63 bitrate=1660.0kbits/s speed=0.744x
+progress 219%
+frame=  984 fps= 16 q=26.0 size=    9472kB time=00:00:32.70 bitrate=2372.9kbits/s speed=0.535x
+progress 566%
+frame=  399 fps= 23 q=26.0 size=    3328kB time=00:00:13.20 bitrate=2065.4kbits/s speed=0.755x
+progress 229%
+frame=  989 fps= 16 q=26.0 size=    9472kB time=00:00:32.86 bitrate=2360.9kbits/s speed=0.533x
+progress 569%
+frame=  416 fps= 23 q=26.0 size=    3584kB time=00:00:13.76 bitrate=2132.7kbits/s speed=0.765x
+progress 238%
+frame=  993 fps= 16 q=26.0 size=    9472kB time=00:00:33.00 bitrate=2351.4kbits/s speed=0.53x
+progress 572%
+frame=  429 fps= 23 q=26.0 size=    3584kB time=00:00:14.20 bitrate=2067.6kbits/s speed=0.767x
+progress 246%
+frame=  998 fps= 16 q=26.0 size=   10496kB time=00:00:33.16 bitrate=2592.5kbits/s speed=0.528x
+progress 574%
+frame=  445 fps= 23 q=26.0 size=    3840kB time=00:00:14.73 bitrate=2135.1kbits/s speed=0.775x
+progress 255%
+frame= 1003 fps= 16 q=26.0 size=   11008kB time=00:00:33.33 bitrate=2705.3kbits/s speed=0.525x
+progress 577%
+frame=  461 fps= 24 q=26.0 size=    3840kB time=00:00:15.26 bitrate=2060.5kbits/s speed=0.782x
+progress 264%
+frame= 1008 fps= 16 q=26.0 size=   11520kB time=00:00:33.50 bitrate=2817.1kbits/s speed=0.523x
+progress 580%
+frame=  479 fps= 24 q=23.0 size=    4352kB time=00:00:15.86 bitrate=2247.0kbits/s speed=0.788x
+progress 275%
+frame= 1013 fps= 16 q=26.0 size=   12032kB time=00:00:33.66 bitrate=2927.7kbits/s speed=0.521x
+progress 583%
+frame=  488 fps= 24 q=26.0 size=    4352kB time=00:00:16.16 bitrate=2205.3kbits/s speed=0.783x
+progress 280%
+frame= 1016 fps= 16 q=26.0 size=   12544kB time=00:00:33.76 bitrate=3043.3kbits/s speed=0.517x
+progress 585%
+frame=  496 fps= 23 q=26.0 size=    4352kB time=00:00:16.43 bitrate=2169.5kbits/s speed=0.772x
+progress 285%
+frame=  505 fps= 23 q=26.0 size=    4352kB time=00:00:16.73 bitrate=2130.6kbits/s speed=0.767x
+progress 290%
+frame= 1020 fps= 15 q=26.0 size=   13056kB time=00:00:33.90 bitrate=3155.0kbits/s speed=0.515x
+progress 587%
+frame=  513 fps= 23 q=26.0 size=    4352kB time=00:00:17.00 bitrate=2097.2kbits/s speed=0.762x
+progress 295%
+frame= 1025 fps= 15 q=26.0 size=   13568kB time=00:00:34.10 bitrate=3259.5kbits/s speed=0.513x
+progress 591%
+frame=  522 fps= 23 q=26.0 size=    4352kB time=00:00:17.30 bitrate=2060.8kbits/s speed=0.756x
+progress 300%
+frame= 1028 fps= 15 q=26.0 size=   14080kB time=00:00:34.16 bitrate=3375.9kbits/s speed=0.51x
+progress 592%
+frame=  531 fps= 23 q=26.0 size=    4608kB time=00:00:17.60 bitrate=2144.8kbits/s speed=0.752x
+progress 305%
+frame= 1033 fps= 15 q=26.0 size=   14592kB time=00:00:34.33 bitrate=3481.7kbits/s speed=0.508x
+progress 595%
+frame=  540 fps= 23 q=26.0 size=    4608kB time=00:00:17.90 bitrate=2108.9kbits/s speed=0.748x
+progress 310%
+frame= 1038 fps= 15 q=26.0 size=   15104kB time=00:00:34.50 bitrate=3586.4kbits/s speed=0.506x
+progress 598%
+frame=  547 fps= 22 q=26.0 size=    4608kB time=00:00:18.13 bitrate=2081.8kbits/s speed=0.742x
+progress 314%
+ GET /api/usage 200 in 376ms
+frame= 1042 fps= 15 q=26.0 size=   15360kB time=00:00:34.63 bitrate=3633.2kbits/s speed=0.502x
+progress 600%
+frame=  554 fps= 22 q=26.0 size=    4608kB time=00:00:18.36 bitrate=2055.3kbits/s speed=0.733x
+progress 318%
+frame= 1046 fps= 15 q=26.0 size=   16128kB time=00:00:34.76 bitrate=3800.2kbits/s speed=0.499x
+progress 602%
+frame=  564 fps= 22 q=26.0 size=    4608kB time=00:00:18.70 bitrate=2018.7kbits/s speed=0.731x
+progress 324%
+frame=  573 fps= 22 q=26.0 size=    4864kB time=00:00:19.00 bitrate=2097.2kbits/s speed=0.728x
+progress 329%
+frame=  583 fps= 22 q=26.0 size=    4864kB time=00:00:19.33 bitrate=2061.0kbits/s speed=0.726x
+progress 335%
+frame=  592 fps= 22 q=26.0 size=    4864kB time=00:00:19.63 bitrate=2029.5kbits/s speed=0.722x
+progress 340%
+frame=  602 fps= 22 q=26.0 size=    4864kB time=00:00:19.96 bitrate=1995.6kbits/s speed=0.719x
+progress 346%
+frame=  612 fps= 22 q=26.0 size=    4864kB time=00:00:20.30 bitrate=1962.9kbits/s speed=0.716x
+progress 352%
+frame=  620 fps= 21 q=26.0 size=    5120kB time=00:00:20.56 bitrate=2039.4kbits/s speed=0.711x
+progress 356%
+frame=  628 fps= 21 q=26.0 size=    5120kB time=00:00:20.86 bitrate=2010.1kbits/s speed=0.709x
+progress 361%
+frame=  638 fps= 21 q=26.0 size=    5888kB time=00:00:21.16 bitrate=2278.8kbits/s speed=0.706x
+progress 367%
+frame=  647 fps= 21 q=26.0 size=    5888kB time=00:00:21.46 bitrate=2247.0kbits/s speed=0.704x
+progress 372%
+ GET /api/usage 200 in 237ms
+frame= 1090 fps= 15 q=26.0 Lsize=   34723kB time=00:00:36.23 bitrate=7850.6kbits/s speed=0.484x
+progress 628%
+video:34004kB audio:685kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.098472%
+[libx264 @ 0x145f07c20] frame I:10    Avg QP:16.85  size:242045
+[libx264 @ 0x145f07c20] frame P:322   Avg QP:19.10  size: 60795
+[libx264 @ 0x145f07c20] frame B:758   Avg QP:22.96  size: 16917
+[libx264 @ 0x145f07c20] consecutive B-frames:  2.1% 14.5%  3.0% 80.4%
+[libx264 @ 0x145f07c20] mb I  I16..4: 10.5% 62.1% 27.3%
+[libx264 @ 0x145f07c20] mb P  I16..4:  2.5% 12.9%  0.7%  P16..4: 32.4% 12.6%  7.2%  0.0%  0.0%    skip:31.7%
+[libx264 @ 0x145f07c20] mb B  I16..4:  0.3%  1.7%  0.0%  B16..8: 25.4%  4.2%  1.1%  direct: 3.6%  skip:63.6%  L0:44.0% L1:46.7% BI: 9.3%
+[libx264 @ 0x145f07c20] 8x8 transform intra:78.2% inter:75.9%
+[libx264 @ 0x145f07c20] coded y,uvDC,uvAC intra: 64.0% 84.3% 47.2% inter: 16.1% 19.9% 4.1%
+[libx264 @ 0x145f07c20] i16 v,h,dc,p: 28% 15%  6% 51%
+[libx264 @ 0x145f07c20] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 24% 16% 21%  5%  7%  7%  6%  7%  7%
+[libx264 @ 0x145f07c20] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 29% 17% 13%  8%  6%  6%  5%  8%  9%
+[libx264 @ 0x145f07c20] i8c dc,h,v,p: 53% 21% 17%  9%
+[libx264 @ 0x145f07c20] Weighted P-Frames: Y:4.0% UV:1.6%
+[libx264 @ 0x145f07c20] ref P L0: 63.4% 13.8% 16.1%  6.5%  0.2%
+[libx264 @ 0x145f07c20] ref B L0: 85.6% 12.5%  1.9%
+[libx264 @ 0x145f07c20] ref B L1: 96.4%  3.6%
+[libx264 @ 0x145f07c20] kb/s:7666.67
+[aac @ 0x145f08d60] Qavg: 52735.105
+frame=  654 fps= 21 q=26.0 size=    5888kB time=00:00:21.70 bitrate=2222.8kbits/s speed= 0.7x
+progress 376%
+
+
+Done: /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-wCiouY/142baf05-c5e0-4ae2-9f4d-e1dfb3aad7ee.mp4
+frame=  663 fps= 21 q=26.0 size=    5888kB time=00:00:22.00 bitrate=2192.5kbits/s speed=0.698x
+progress 381%
+frame=  672 fps= 21 q=26.0 size=    5888kB time=00:00:22.30 bitrate=2163.0kbits/s speed=0.696x
+progress 386%
+frame=  682 fps= 21 q=26.0 size=    6144kB time=00:00:22.63 bitrate=2223.8kbits/s speed=0.695x
+progress 392%
+frame=  692 fps= 21 q=26.0 size=    6144kB time=00:00:22.96 bitrate=2191.5kbits/s speed=0.693x
+progress 398%
+ GET /lab 200 in 24ms
+frame=  701 fps= 21 q=26.0 size=    6144kB time=00:00:23.26 bitrate=2163.3kbits/s speed=0.69x
+progress 403%
+ GET /api/usage 200 in 388ms
+ GET /api/projects 200 in 506ms
+frame=  711 fps= 21 q=26.0 size=    6400kB time=00:00:23.60 bitrate=2221.6kbits/s speed=0.689x
+progress 409%
+ GET /api/projects 200 in 305ms
+frame=  720 fps= 21 q=26.0 size=    6400kB time=00:00:23.90 bitrate=2193.7kbits/s speed=0.687x
+progress 414%
+frame=  729 fps= 21 q=23.0 size=    6656kB time=00:00:24.20 bitrate=2253.2kbits/s speed=0.685x
+progress 419%
+frame=  738 fps= 21 q=26.0 size=    6656kB time=00:00:24.50 bitrate=2225.6kbits/s speed=0.683x
+progress 424%
+frame=  748 fps= 21 q=26.0 size=    6912kB time=00:00:24.83 bitrate=2280.1kbits/s speed=0.681x
+progress 430%
+frame=  757 fps= 20 q=26.0 size=    6912kB time=00:00:25.13 bitrate=2252.9kbits/s speed=0.68x
+progress 435%
+frame=  766 fps= 20 q=26.0 size=    7168kB time=00:00:25.43 bitrate=2308.8kbits/s speed=0.678x
+progress 441%
+frame=  775 fps= 20 q=26.0 size=    7168kB time=00:00:25.73 bitrate=2281.9kbits/s speed=0.677x
+progress 446%
+frame=  784 fps= 20 q=26.0 size=    7168kB time=00:00:26.03 bitrate=2255.6kbits/s speed=0.675x
+progress 451%
+frame=  788 fps= 20 q=26.0 size=    7168kB time=00:00:26.16 bitrate=2244.1kbits/s speed=0.669x
+progress 453%
+frame=  792 fps= 20 q=26.0 size=    7424kB time=00:00:26.30 bitrate=2312.5kbits/s speed=0.663x
+progress 456%
+ GET /api/usage 200 in 247ms
+frame=  795 fps= 20 q=26.0 size=    7424kB time=00:00:26.40 bitrate=2303.7kbits/s speed=0.658x
+progress 457%
+frame=  800 fps= 20 q=26.0 size=    7424kB time=00:00:26.56 bitrate=2289.3kbits/s speed=0.652x
+progress 460%
+ GET /lab 200 in 19ms
+frame=  805 fps= 19 q=26.0 size=    7424kB time=00:00:26.73 bitrate=2275.0kbits/s speed=0.646x
+progress 463%
+ GET /api/projects 200 in 313ms
+ GET /api/usage 200 in 319ms
+ GET /api/projects 200 in 197ms
+frame=  810 fps= 19 q=26.0 size=    7424kB time=00:00:26.90 bitrate=2260.9kbits/s speed=0.639x
+progress 466%
+ GET /lab 200 in 26ms
+ GET /lab 200 in 29ms
+frame=  813 fps= 19 q=26.0 size=    7424kB time=00:00:27.00 bitrate=2252.5kbits/s speed=0.633x
+progress 468%
+ GET /api/usage 200 in 156ms
+ GET /api/projects 200 in 157ms
+ GET /lab 200 in 20ms
+ GET /api/usage 200 in 143ms
+ GET /api/projects 200 in 196ms
+ GET /api/projects 200 in 240ms
+frame=  817 fps= 19 q=26.0 size=    7680kB time=00:00:27.13 bitrate=2318.7kbits/s speed=0.629x
+progress 470%
+ GET /lab 200 in 15ms
+frame=  821 fps= 19 q=26.0 size=    7680kB time=00:00:27.26 bitrate=2307.4kbits/s speed=0.625x
+progress 472%
+ GET /api/usage 200 in 148ms
+ GET /api/projects 200 in 203ms
+ GET /api/projects 200 in 261ms
+frame=  824 fps= 19 q=26.0 size=    7680kB time=00:00:27.36 bitrate=2299.0kbits/s speed=0.62x
+progress 474%
+frame=  829 fps= 19 q=26.0 size=    7680kB time=00:00:27.53 bitrate=2285.0kbits/s speed=0.615x
+progress 477%
+frame=  834 fps= 18 q=26.0 size=    7680kB time=00:00:27.70 bitrate=2271.3kbits/s speed=0.609x
+progress 480%
+frame=  839 fps= 18 q=26.0 size=    7936kB time=00:00:27.86 bitrate=2333.0kbits/s speed=0.605x
+progress 483%
+frame=  842 fps= 18 q=26.0 size=    7936kB time=00:00:27.96 bitrate=2324.6kbits/s speed=0.599x
+progress 484%
+frame=  846 fps= 18 q=26.0 size=    7936kB time=00:00:28.10 bitrate=2313.6kbits/s speed=0.596x
+progress 487%
+frame=  851 fps= 18 q=26.0 size=    7936kB time=00:00:28.26 bitrate=2300.0kbits/s speed=0.592x
+progress 490%
+frame=  854 fps= 18 q=26.0 size=    7936kB time=00:00:28.36 bitrate=2291.8kbits/s speed=0.587x
+progress 491%
+frame=  858 fps= 18 q=26.0 size=    7936kB time=00:00:28.50 bitrate=2281.1kbits/s speed=0.584x
+progress 494%
+frame=  862 fps= 17 q=26.0 size=    8192kB time=00:00:28.66 bitrate=2341.0kbits/s speed=0.581x
+progress 496%
+frame=  866 fps= 17 q=26.0 size=    8192kB time=00:00:28.76 bitrate=2332.9kbits/s speed=0.576x
+progress 498%
+frame=  871 fps= 17 q=26.0 size=    8192kB time=00:00:28.93 bitrate=2319.4kbits/s speed=0.572x
+progress 501%
+frame=  876 fps= 17 q=26.0 size=    8192kB time=00:00:29.10 bitrate=2306.2kbits/s speed=0.568x
+progress 504%
+frame=  881 fps= 17 q=26.0 size=    8192kB time=00:00:29.26 bitrate=2293.0kbits/s speed=0.565x
+progress 507%
+frame=  885 fps= 17 q=26.0 size=    8448kB time=00:00:29.40 bitrate=2354.0kbits/s speed=0.561x
+progress 509%
+frame=  890 fps= 17 q=26.0 size=    8448kB time=00:00:29.56 bitrate=2340.7kbits/s speed=0.558x
+progress 512%
+frame=  894 fps= 17 q=23.0 size=    8448kB time=00:00:29.70 bitrate=2330.2kbits/s speed=0.555x
+progress 515%
+frame=  900 fps= 17 q=26.0 size=    8448kB time=00:00:29.90 bitrate=2314.6kbits/s speed=0.552x
+progress 518%
+frame=  906 fps= 17 q=26.0 size=    8704kB time=00:00:30.10 bitrate=2368.9kbits/s speed=0.549x
+progress 521%
+frame=  912 fps= 16 q=26.0 size=    8704kB time=00:00:30.33 bitrate=2350.7kbits/s speed=0.547x
+progress 525%
+frame=  918 fps= 16 q=26.0 size=    8704kB time=00:00:30.50 bitrate=2337.8kbits/s speed=0.544x
+progress 528%
+frame=  924 fps= 16 q=26.0 size=    8704kB time=00:00:30.70 bitrate=2322.6kbits/s speed=0.542x
+progress 532%
+frame=  930 fps= 16 q=26.0 size=    8960kB time=00:00:30.90 bitrate=2375.4kbits/s speed=0.54x
+progress 535%
+frame=  936 fps= 16 q=26.0 size=    8960kB time=00:00:31.10 bitrate=2360.2kbits/s speed=0.539x
+progress 539%
+frame=  942 fps= 16 q=26.0 size=    8960kB time=00:00:31.30 bitrate=2345.1kbits/s speed=0.537x
+progress 542%
+frame=  949 fps= 16 q=26.0 size=    9216kB time=00:00:31.53 bitrate=2394.2kbits/s speed=0.535x
+progress 546%
+frame=  955 fps= 16 q=26.0 size=    9216kB time=00:00:31.73 bitrate=2379.1kbits/s speed=0.533x
+progress 550%
+frame=  961 fps= 16 q=26.0 size=    9216kB time=00:00:31.93 bitrate=2364.2kbits/s speed=0.532x
+progress 553%
+frame=  966 fps= 16 q=26.0 size=    9216kB time=00:00:32.10 bitrate=2352.0kbits/s speed=0.53x
+progress 556%
+frame=  971 fps= 16 q=26.0 size=    9472kB time=00:00:32.26 bitrate=2404.8kbits/s speed=0.528x
+progress 559%
+frame=  978 fps= 16 q=26.0 size=    9472kB time=00:00:32.50 bitrate=2387.5kbits/s speed=0.527x
+progress 563%
+frame=  984 fps= 16 q=26.0 size=    9472kB time=00:00:32.70 bitrate=2372.9kbits/s speed=0.524x
+progress 566%
+frame=  990 fps= 16 q=26.0 size=    9472kB time=00:00:32.90 bitrate=2358.5kbits/s speed=0.522x
+progress 570%
+frame=  995 fps= 16 q=26.0 size=    9984kB time=00:00:33.06 bitrate=2473.5kbits/s speed=0.52x
+progress 573%
+frame=  999 fps= 16 q=26.0 size=   10496kB time=00:00:33.20 bitrate=2589.9kbits/s speed=0.517x
+progress 575%
+frame= 1004 fps= 16 q=26.0 size=   11264kB time=00:00:33.36 bitrate=2765.5kbits/s speed=0.515x
+progress 578%
+frame= 1009 fps= 15 q=26.0 size=   11776kB time=00:00:33.53 bitrate=2876.8kbits/s speed=0.514x
+progress 581%
+frame= 1014 fps= 15 q=26.0 size=   12288kB time=00:00:33.70 bitrate=2987.1kbits/s speed=0.512x
+progress 584%
+frame= 1019 fps= 15 q=26.0 size=   12800kB time=00:00:33.86 bitrate=3096.2kbits/s speed=0.51x
+progress 587%
+frame= 1022 fps= 15 q=26.0 size=   13312kB time=00:00:33.96 bitrate=3210.6kbits/s speed=0.508x
+progress 588%
+frame= 1027 fps= 15 q=26.0 size=   13824kB time=00:00:34.13 bitrate=3317.8kbits/s speed=0.506x
+progress 591%
+frame= 1032 fps= 15 q=26.0 size=   14336kB time=00:00:34.30 bitrate=3423.9kbits/s speed=0.504x
+progress 594%
+frame= 1037 fps= 15 q=26.0 size=   14848kB time=00:00:34.46 bitrate=3529.1kbits/s speed=0.502x
+progress 597%
+frame= 1042 fps= 15 q=26.0 size=   15360kB time=00:00:34.63 bitrate=3633.2kbits/s speed= 0.5x
+progress 600%
+frame= 1046 fps= 15 q=26.0 size=   16128kB time=00:00:34.76 bitrate=3800.2kbits/s speed=0.498x
+progress 602%
+frame= 1090 fps= 15 q=26.0 Lsize=   34723kB time=00:00:36.23 bitrate=7850.6kbits/s speed=0.487x
+video:34004kB audio:685kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.098472%
+progress 628%
+[libx264 @ 0x1278053b0] frame I:10    Avg QP:16.85  size:242045
+[libx264 @ 0x1278053b0] frame P:322   Avg QP:19.10  size: 60795
+[libx264 @ 0x1278053b0] frame B:758   Avg QP:22.96  size: 16917
+[libx264 @ 0x1278053b0] consecutive B-frames:  2.1% 14.5%  3.0% 80.4%
+[libx264 @ 0x1278053b0] mb I  I16..4: 10.5% 62.1% 27.3%
+[libx264 @ 0x1278053b0] mb P  I16..4:  2.5% 12.9%  0.7%  P16..4: 32.4% 12.6%  7.2%  0.0%  0.0%    skip:31.7%
+[libx264 @ 0x1278053b0] mb B  I16..4:  0.3%  1.7%  0.0%  B16..8: 25.4%  4.2%  1.1%  direct: 3.6%  skip:63.6%  L0:44.0% L1:46.7% BI: 9.3%
+[libx264 @ 0x1278053b0] 8x8 transform intra:78.2% inter:75.9%
+[libx264 @ 0x1278053b0] coded y,uvDC,uvAC intra: 64.0% 84.3% 47.2% inter: 16.1% 19.9% 4.1%
+[libx264 @ 0x1278053b0] i16 v,h,dc,p: 28% 15%  6% 51%
+[libx264 @ 0x1278053b0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 24% 16% 21%  5%  7%  7%  6%  7%  7%
+[libx264 @ 0x1278053b0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 29% 17% 13%  8%  6%  6%  5%  8%  9%
+[libx264 @ 0x1278053b0] i8c dc,h,v,p: 53% 21% 17%  9%
+[libx264 @ 0x1278053b0] Weighted P-Frames: Y:4.0% UV:1.6%
+[libx264 @ 0x1278053b0] ref P L0: 63.4% 13.8% 16.1%  6.5%  0.2%
+[libx264 @ 0x1278053b0] ref B L0: 85.6% 12.5%  1.9%
+[libx264 @ 0x1278053b0] ref B L1: 96.4%  3.6%
+[libx264 @ 0x1278053b0] kb/s:7666.67
+[aac @ 0x1278064f0] Qavg: 52735.105
+
+
+Done: /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/507ba2ed-0ac2-420e-89ac-7690b14e9b7e.mp4
+ GET /api/usage 200 in 334ms
+ GET /api/usage 200 in 718ms
+ GET /api/usage 200 in 641ms
+ GET /api/usage 200 in 240ms
+ GET /api/projects 200 in 635ms

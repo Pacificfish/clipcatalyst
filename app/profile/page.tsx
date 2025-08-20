@@ -12,19 +12,6 @@ export default function ProfilePage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (!session) {
-    return (
-      <>
-        <Nav />
-        <main className="container py-16">
-          <div className="card p-6">Please sign in to view your profile.</div>
-        </main>
-      </>
-    );
-  }
-
-  const plan = String(session.user.user_metadata?.plan || 'Free');
-
   useEffect(() => {
     async function loadSub() {
       try {
@@ -48,6 +35,20 @@ export default function ProfilePage() {
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [session?.access_token]);
+
+  if (!session) {
+    return (
+      <>
+        <Nav />
+        <main className="container py-16">
+          <div className="card p-6">Please sign in to view your profile.</div>
+        </main>
+      </>
+    );
+  }
+
+  const plan = String(session.user.user_metadata?.plan || 'Free');
+
 
   async function openBillingPortal() {
     const res = await fetch('/api/billing/portal', {

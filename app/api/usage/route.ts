@@ -17,11 +17,18 @@ export async function GET(req: Request) {
     const user = userData.user
 
     const plan = String((user.user_metadata as any)?.plan || '').toLowerCase()
-    const allowance = getAllowanceForPlan(plan)
+    const email = (user.email || '').toLowerCase()
+    const devOverride = (process.env.NEXT_PUBLIC_DEV_SUB_EMAILS || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(email)
+    const effectivePlan = (devOverride ? 'pro' : plan) as string
+    const allowance = getAllowanceForPlan(effectivePlan)
     const period = currentPeriodStart()
 
     if (allowance.monthly === 'unlimited') {
-      return NextResponse.json({ plan, monthly: 'unlimited', used: 0, remaining: 'unlimited', period_start: period }, { headers })
+      return NextResponse.json({ plan: effectivePlan, monthly: 'unlimited', used: 0, remaining: 'unlimited', period_start: period }, { headers })
     }
 
     const { data: usageRow, error: usageErr } = await supabaseAdmin

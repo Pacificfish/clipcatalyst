@@ -15,6 +15,6 @@ export default function BillingSuccessPage() {
           <Link className="btn" href="/profile">View Profile</Link>
         </div>
       </main>
-    </>>
+    </>
   );
 }
