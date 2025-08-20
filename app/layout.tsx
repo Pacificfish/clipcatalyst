@@ -1,9 +1,21 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://clipcatalyst.app'),
   title: 'ClipCatalyst – Turn ideas into viral shorts in minutes',
   description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
+  keywords: ['shorts generator','ai video','tiktok','reels','youtube shorts','captions','voiceover','elevenlabs'],
+  authors: [{ name: 'ClipCatalyst' }],
+  alternates: { canonical: '/' },
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
   openGraph: {
     title: 'ClipCatalyst – Viral shorts in minutes',
     description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
@@ -21,10 +33,31 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport = {
+  themeColor: '#0A0F1F',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'ClipCatalyst',
+    applicationCategory: 'MultimediaApplication',
+    operatingSystem: 'Web',
+    description: 'Generate 30–60s scripts, voiceovers, and bold captions for short-form video.',
+    url: 'https://clipcatalyst.app',
+  }
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </body>
     </html>
   )
 }

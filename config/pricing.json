@@ -1,0 +1,15 @@
+{
+  "credit_unit": "1 video credit = 1 generated video",
+  "beginner": {
+    "price": "$15/mo",
+    "credits_per_month": 20
+  },
+  "pro": {
+    "price": "$49/mo",
+    "credits_per_month": 30
+  },
+  "agency": {
+    "price": "$100/month",
+    "credits": "unlimited"
+  }
+}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Nav from '@/components/Nav';
 import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
 
 type GenerateResult = {
   mp3_url?: string;
@@ -13,15 +14,23 @@ type GenerateResult = {
 };
 
 export default function LabPage() {
-  const [session, setSession] = useState<any>(null);
-  const [mode, setMode] = useState<'Paste' | 'URL'>('Paste');
+  const [session, setSession] = useStatecanye(null);
+  const [mode, setMode] = useStatec'Paste' | 'URL'e('Paste');
   const [source, setSource] = useState('');
   const [language, setLanguage] = useState('English');
   const [tone, setTone] = useState('Informative');
   const [topic, setTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GenerateResult | null>(null);
+  const [error, setError] = useStatecstring | nulle(null);
+  const [result, setResult] = useStatecGenerateResult | nulle(null);
+
+  // utils
+  function isValidUrl(u: string) {
+    try { new URL(u); return true } catch { return false }
+  }
+  function debounce<T extends (...args: any[]) => void>(fn: T, ms = 250) {
+    let t: any; return (...args: any[]) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) }
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -29,12 +38,63 @@ export default function LabPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Fetch usage to show remaining credits
+  useEffect(() => {
+    async function loadUsage() {
+      if (!session?.access_token) return;
+      try {
+        const res = await fetch('/api/usage', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const data = await res.json();
+        const el = document.getElementById('credits-indicator') as HTMLElement | null;
+        const inline = document.getElementById('credits-inline') as HTMLElement | null;
+        if (!res.ok || data.error) {
+          if (el) el.textContent = '';
+          if (inline) inline.textContent = '';
+        } else if (data.monthly === 'unlimited') {
+          if (el) el.textContent = 'Credits: unlimited';
+          if (inline) inline.textContent = 'unlimited';
+        } else {
+          const msg = `Credits: ${data.remaining} of ${data.monthly} left`;
+          if (el) el.textContent = msg;
+          if (inline) inline.textContent = `${data.remaining}/${data.monthly}`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadUsage();
+
+    // Auto-refresh when user returns to tab (e.g., after Stripe portal)
+    const onVis = debounce(() => { if (document.visibilityState === 'visible') loadUsage() }, 150);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [session?.access_token]);
+
   if (!session) {
     return (
       <>
         <Nav />
         <main className="container py-16">
           <div className="card p-6">Please sign in to use the Lab.</div>
+        </main>
+      </>
+    );
+  }
+
+  const plan = String(session?.user?.user_metadata?.plan || '').toLowerCase();
+  const hasSubscription = ['beginner', 'pro', 'agency'].includes(plan);
+  if (!hasSubscription) {
+    return (
+      <>
+        <Nav />
+        <main className="container py-16">
+          <div className="card p-6 space-y-3">
+            <div className="font-semibold">Subscription required</div>
+            <p className="text-white/70 text-sm">Your account does not have an active plan. Choose a plan to unlock the Lab.</p>
+            <div>
+              <Link className="btn-primary" href="/pricing">View pricing</Link>
+            </div>
+          </div>
         </main>
       </>
     );
@@ -60,12 +120,34 @@ export default function LabPage() {
 
       const res = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(body),
       });
       const data: GenerateResult = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
       setResult(data);
+      // Refresh usage indicator after successful generation
+      try {
+        
+        const res2 = await fetch('/api/usage', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const data2 = await res2.json();
+        const el = document.getElementById('credits-indicator') as HTMLElement | null;
+        const inline = document.getElementById('credits-inline') as HTMLElement | null;
+        if (!res2.ok || data2.error) {
+          if (el) el.textContent = '';
+          if (inline) inline.textContent = '';
+        } else if (data2.monthly === 'unlimited') {
+          if (el) el.textContent = 'Credits: unlimited';
+          if (inline) inline.textContent = 'unlimited';
+        } else {
+          const msg = `Credits: ${data2.remaining} of ${data2.monthly} left`;
+          if (el) el.textContent = msg;
+          if (inline) inline.textContent = `${data2.remaining}/${data2.monthly}`;
+        }
+      } catch {}
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');
     } finally {
@@ -73,7 +155,7 @@ export default function LabPage() {
     }
   }
 
-  const disabled = isLoading || !source.trim();
+  const disabled = isLoading || (mode === 'Paste' ? !source.trim() : !isValidUrl(source.trim()));
 
   return (
     <>
@@ -81,7 +163,32 @@ export default function LabPage() {
       <main className="container py-16 space-y-8">
         <header className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Lab</h1>
-          <div className="text-xs text-white/60">Signed in as {email}</div>
+          <div className="flex items-center gap-3">
+            <span id="credits-indicator" className="text-xs text-white/60"></span>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/usage', { headers: { Authorization: `Bearer ${session.access_token}` } });
+                  const data = await res.json();
+          const el = document.getElementById('credits-indicator') as HTMLElement | null;
+          const inline = document.getElementById('credits-inline') as HTMLElement | null;
+                  if (!res.ok || data.error) {
+                    if (el) el.textContent = '';
+                    if (inline) inline.textContent = '';
+                  } else if (data.monthly === 'unlimited') {
+                    if (el) el.textContent = 'Credits: unlimited';
+                    if (inline) inline.textContent = 'unlimited';
+                  } else {
+                    const msg = `Credits: ${data.remaining} of ${data.monthly} left`;
+                    if (el) el.textContent = msg;
+                    if (inline) inline.textContent = `${data.remaining}/${data.monthly}`;
+                  }
+                } catch {}
+              }}
+              className="btn"
+            >Refresh</button>
+            <div className="text-xs text-white/60">Signed in as {email}</div>
+          </div>
         </header>
 
         <div className="card p-6 space-y-4">
@@ -153,7 +260,7 @@ export default function LabPage() {
           </div>
 
           {/* Generate */}
-          <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex items-center gap-3">
             <button
               onClick={handleGenerate}
               disabled={disabled}
@@ -161,6 +268,7 @@ export default function LabPage() {
             >
               {isLoading ? 'Generating…' : 'Generate'}
             </button>
+            <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5"></span>
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 

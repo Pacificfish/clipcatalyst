@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { htmlToText } from '@/lib/htmlToText'
 import crypto from 'crypto'
+import { getAllowanceForPlan, currentPeriodStart } from '@/lib/credits'
 
 export const runtime = 'nodejs' // ensure Node runtime
 export const dynamic = 'force-dynamic'
@@ -47,12 +48,43 @@ export async function POST(req: Request) {
       if (!v) return NextResponse.json({ error: `Missing ${k}` }, { status: 500, headers })
     }
 
+    // Auth: require Supabase access token and active subscription
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token)
+    if (userErr || !userData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
+    const user = userData.user
+    const plan = String((user.user_metadata as any)?.plan || '').toLowerCase()
+    const hasSubscription = ['beginner', 'pro', 'agency'].includes(plan)
+    if (!hasSubscription) return NextResponse.json({ error: 'Subscription required' }, { status: 403, headers })
+
+    // Credits: enforce monthly allowanced usage (except agency)
+    const allowance = getAllowanceForPlan(plan)
+    const period = currentPeriodStart()
+    let used = 0
+    if (allowance.monthly !== 'unlimited') {
+      const { data: usageRow, error: usageErr } = await supabaseAdmin
+        .from('usage_credits')
+        .select('used_credits')
+        .eq('user_id', user.id)
+        .eq('period_start', period)
+        .maybeSingle()
+      if (usageErr && usageErr.code !== 'PGRST116') {
+        return NextResponse.json({ error: 'Usage read failed', details: usageErr.message }, { status: 500, headers })
+      }
+      used = Number(usageRow?.used_credits || 0)
+      if (used >= allowance.monthly) {
+        return NextResponse.json({ error: 'Out of credits for this period' }, { status: 402, headers })
+      }
+    }
+
     const body = (await req.json()) as Payload
     const { mode, source_text, source_url } = body
     const language = body.language ?? 'English'
     const tone = body.tone ?? 'Informative'
     const topic = body.topic ?? ''
-    const email = (body.email ?? 'anon').toLowerCase()
+    const email = (user.email ?? 'anon').toLowerCase()
     const projectId = body.project_id || Math.random().toString(36).slice(2, 10)
 
     if (!mode || (mode === 'Paste' && !source_text) || (mode === 'URL' && !source_url)) {
@@ -181,6 +213,17 @@ Return ONLY JSON per the schema.
 
     const mp3Pub = supabaseAdmin.storage.from('clips').getPublicUrl(mp3Path).data.publicUrl
     const csvPub = supabaseAdmin.storage.from('clips').getPublicUrl(csvPath).data.publicUrl
+
+    // 6) Increment usage after successful generation
+    if (allowance.monthly !== 'unlimited') {
+      const { error: upErr } = await supabaseAdmin
+        .from('usage_credits')
+        .upsert({ user_id: user.id, period_start: period, used_credits: used + 1 }, { onConflict: 'user_id,period_start' })
+      if (upErr) {
+        // Not fatal to the user; log-like response
+        return NextResponse.json({ error: 'Usage update failed', details: upErr.message }, { status: 500, headers })
+      }
+    }
 
     // Optional: insert project row (if you already created the table & RLS policies)
     // await supabaseAdmin.from('projects').insert({

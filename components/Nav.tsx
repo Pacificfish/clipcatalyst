@@ -20,6 +20,16 @@ export default function Nav() {
     if (error) alert(error.message);
     else alert('Check your email for the magic link.');
   }
+
+  async function loginWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile` : undefined,
+      },
+    });
+  }
+
   async function logout() { await supabase.auth.signOut(); }
 
   return (
@@ -30,7 +40,10 @@ export default function Nav() {
           <Link href="/lab" className="btn">Lab</Link>
           <Link href="/profile" className="btn">Profile</Link>
           {!session ? (
-            <button onClick={login} className="btn">Sign in</button>
+            <div className="flex items-center gap-2">
+              <button onClick={loginWithGoogle} className="btn">Sign in with Google</button>
+              <button onClick={login} className="btn">Email link</button>
+            </div>
           ) : (
             <button onClick={logout} className="btn">Sign out</button>
           )}

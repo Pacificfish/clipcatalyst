@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root { color-scheme: dark; }
-body { @apply bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 min-h-screen; }
+body { @apply bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 min-h-screen antialiased; }
 .container { @apply mx-auto max-w-6xl px-4; }
 .btn { @apply text-xs px-3 py-1 rounded-full border border-white/15 text-neutral-200 hover:text-white hover:bg-white/10; }
 .btn-primary { @apply px-5 py-2 rounded-xl bg-white text-black hover:bg-white/90 text-sm; }
@@ -32,4 +32,11 @@ html, body { background: var(--bg); color: var(--text); }
 .gradient-text{
   background: linear-gradient(90deg, var(--brand) 0%, #5cf 35%, var(--brand-2) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* Accessibility & focus improvements */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }
