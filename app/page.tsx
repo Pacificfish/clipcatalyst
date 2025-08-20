@@ -24,7 +24,6 @@ export default function Home() {
               <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Project history & presets</li>
             </ul>
             <div className="flex items-center gap-3">
-              <Link href="/lab" className="btn-primary">Try it free</Link>
               <Link href="/pricing" className="btn">See pricing</Link>
             </div>
             <div className="text-xs text-white/60">No credit card required. Free credits included.</div>
