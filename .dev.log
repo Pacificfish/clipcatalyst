@@ -1214,3 +1214,4 @@ Done: /var/folders/js/vw5bshnd4k3fpvpjd8bcbndw0000gn/T/render-Zhh8tt/507ba2ed-0a
  GET /api/usage 200 in 641ms
  GET /api/usage 200 in 240ms
  GET /api/projects 200 in 635ms
+ GET /api/usage 200 in 802ms
