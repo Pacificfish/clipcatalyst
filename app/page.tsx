@@ -3,8 +3,26 @@
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
+  const [trialUsed, setTrialUsed] = useState(false)
+
+  useEffect(() => {
+    try {
+      setTrialUsed(localStorage.getItem('trial_used') === '1')
+    } catch {}
+  }, [])
+
+  function handleTryFree() {
+    try {
+      localStorage.setItem('trial_used', '1')
+    } catch {}
+    router.push('/lab')
+  }
+
   return (
     <>
       <Header />
@@ -24,6 +42,9 @@ export default function Home() {
               <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Project history & presets</li>
             </ul>
             <div className="flex items-center gap-3">
+              <button onClick={handleTryFree} disabled={trialUsed} className={`btn-primary ${trialUsed ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                {trialUsed ? 'Trial used' : 'Try it free'}
+              </button>
               <Link href="/pricing" className="btn">See pricing</Link>
             </div>
             <div className="text-xs text-white/60">No credit card required. Free credits included.</div>
