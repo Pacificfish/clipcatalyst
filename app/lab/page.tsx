@@ -318,6 +318,15 @@ export default function LabPage() {
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 
+          {/* Veo3 (feature-gated) */}
+          {process.env.NEXT_PUBLIC_ENABLE_VEO3 === '1' && (
+            <div className="mt-8 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
+              <div className="text-sm font-semibold">AI Video (Veo3)</div>
+              <p className="text-xs text-white/60">Generate an AI video from a text prompt. Configure provider env vars to enable.</p>
+              <Veo3Form token={session?.access_token} />
+            </div>
+          )}
+
           {/* Error */}
           {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
 
@@ -349,6 +358,71 @@ export default function LabPage() {
       </main>
     </>
   );
+}
+
+function Veo3Form({ token }: { token?: string }) {
+  const [prompt, setPrompt] = useState('A cinematic drone shot over neon city at night')
+  const [duration, setDuration] = useState(6)
+  const [ar, setAr] = useState<'9:16' | '1:1' | '16:9'>('9:16')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function onGenerate() {
+    setLoading(true); setErr(null)
+    try {
+      const res = await fetch('/api/video/veo3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ prompt, duration, aspect_ratio: ar }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Failed to start Veo3 job')
+      if (data?.video_url) {
+        const a = document.createElement('a')
+        a.href = data.video_url
+        a.download = `veo3-${Date.now()}.mp4`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } else {
+        alert(data?.message || 'Veo3 job accepted. Check back soon.')
+      }
+    } catch (e: any) {
+      setErr(e?.message || 'Failed to generate video')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-white/60">Prompt</span>
+        <textarea className="w-full h-24 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" value={prompt} onChange={e => setPrompt(e.target.value)} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-white/60">Duration (sec)</span>
+          <input type="number" min={2} max={10} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={duration} onChange={e => setDuration(parseInt(e.target.value || '6', 10))} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-white/60">Aspect ratio</span>
+          <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={ar} onChange={e => setAr(e.target.value as any)}>
+            <option value="9:16">9:16</option>
+            <option value="1:1">1:1</option>
+            <option value="16:9">16:9</option>
+          </select>
+        </label>
+      </div>
+      {err && <div className="text-xs text-rose-300">{err}</div>}
+      <button onClick={onGenerate} disabled={loading} className={`btn-primary ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}>
+        {loading ? 'Generating…' : 'Generate with Veo3'}
+      </button>
+    </div>
+  )
 }
 
 function ProjectsGrid({ token }: { token?: string }) {
