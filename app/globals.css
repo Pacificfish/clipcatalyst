@@ -33,11 +33,13 @@ html, body { background: var(--bg); color: var(--text); }
 
 /* Header polish */
 .header-frost { @apply sticky top-0 z-50 border-b border-white/10 bg-white/5 backdrop-blur-md; }
+
+.gradient-text{
   background: linear-gradient(90deg, var(--brand) 0%, #5cf 35%, var(--brand-2) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* Accessibility & focus improvements */
+/* Accessibility \u0026 focus improvements */
 :focus-visible { outline: 2px solid rgba(255,255,255,0.9); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
