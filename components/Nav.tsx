@@ -33,7 +33,7 @@ export default function Nav() {
   async function logout() { await supabase.auth.signOut(); }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur">
+<header className="header-frost">
       <div className="container py-3 flex items-center gap-4">
         <Link href="/" className="font-semibold">ClipCatalyst</Link>
         <nav className="ml-auto flex items-center gap-2">
