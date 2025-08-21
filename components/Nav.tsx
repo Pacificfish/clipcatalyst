@@ -8,6 +8,8 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const email = session?.user?.email ?? '';
+  const plan = String(session?.user?.user_metadata?.plan || 'Free');
+  const isPaid = plan.toLowerCase() !== 'free';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -44,6 +46,23 @@ export default function Nav() {
         redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/profile` : undefined,
       },
     });
+  }
+
+  async function openBillingPortal() {
+    try {
+      const res = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+          'x-return-url': typeof window !== 'undefined' ? `${window.location.origin}/profile` : '',
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.url) throw new Error(data?.error || 'Could not open billing portal');
+      window.location.href = data.url;
+    } catch (e: any) {
+      alert(e?.message || 'Could not open billing portal.');
+    }
   }
 
   async function logout() { await supabase.auth.signOut(); setOpen(false); }
@@ -83,6 +102,11 @@ export default function Nav() {
                   <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
                     Pricing
                   </Link>
+                  {isPaid && (
+                    <button onClick={openBillingPortal} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
+                      Manage billing
+                    </button>
+                  )}
                   <div className="h-px my-1 bg-white/10" />
                   <button onClick={logout} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
                     Sign out
