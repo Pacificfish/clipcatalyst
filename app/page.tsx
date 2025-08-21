@@ -29,17 +29,17 @@ export default function Home() {
       <main className="container py-16 space-y-20">
         <section className="grid lg:grid-cols-2 gap-10 items-center">
           <div className="space-y-6">
-            <h1 className="text-5xl font-extrabold leading-tight">
+            <h1 className="text-5xl font-extrabold leading-tight gradient-text">
               Create viral shorts faster than ever
             </h1>
-            <p className="text-white/70 text-lg">
+            <p className="text-white/80 text-lg">
               For creators who care about quality. Generate scripts, voiceovers, bold captions and TikTok‑ready edits in minutes—not hours.
             </p>
             <ul className="grid sm:grid-cols-2 gap-3 text-sm text-white/80">
-              <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Studio‑grade captions</li>
-              <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Smart b‑roll & background</li>
-              <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Fast render pipeline</li>
-              <li className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">• Project history & presets</li>
+              <li className="badge">Studio‑grade captions</li>
+              <li className="badge">Smart b‑roll & background</li>
+              <li className="badge">Fast render pipeline</li>
+              <li className="badge">Project history & presets</li>
             </ul>
             <div className="flex items-center gap-3">
               <button onClick={handleTryFree} disabled={trialUsed} className={`btn-primary ${trialUsed ? 'opacity-60 cursor-not-allowed' : ''}`}>
@@ -49,7 +49,7 @@ export default function Home() {
             </div>
             <div className="text-xs text-white/60">No credit card required. Free credits included.</div>
           </div>
-          <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
+          <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-4 backdrop-blur-md">
             <div className="aspect-[9/16] w-full rounded-xl bg-gradient-to-b from-white/10 to-transparent ring-1 ring-white/10 grid place-items-center text-white/70">
               Live preview coming soon
             </div>
