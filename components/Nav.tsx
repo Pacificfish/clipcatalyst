@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function Nav() {
   const [session, setSession] = useState<any>(null);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const email = session?.user?.email ?? '';
 
   useEffect(() => {
@@ -12,6 +14,20 @@ export default function Nav() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (open && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   async function login() {
     const e = prompt('Enter your email for a magic link:');
@@ -30,26 +46,53 @@ export default function Nav() {
     });
   }
 
-  async function logout() { await supabase.auth.signOut(); }
+  async function logout() { await supabase.auth.signOut(); setOpen(false); }
+
+  const initial = email ? email.charAt(0).toUpperCase() : '';
 
   return (
-<header className="header-frost">
+    <header className="header-frost">
       <div className="container py-3 flex items-center gap-4">
         <Link href="/" className="font-semibold">ClipCatalyst</Link>
         <nav className="ml-auto flex items-center gap-2">
           <Link href="/lab" className="btn">Lab</Link>
-          <Link href="/profile" className="btn">Profile</Link>
           {!session ? (
             <div className="flex items-center gap-2">
               <button onClick={loginWithGoogle} className="btn">Sign in with Google</button>
               <button onClick={login} className="btn">Email link</button>
             </div>
           ) : (
-            <button onClick={logout} className="btn">Sign out</button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setOpen((v) => !v)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/90 hover:bg-white/20 backdrop-blur-md"
+                aria-label="Open profile menu"
+                aria-expanded={open}
+              >
+                <span className="text-sm font-medium">{initial || '•'}</span>
+              </button>
+              {open && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white/5 ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
+                  <div className="px-3 py-2 text-xs text-white/60">Signed in as {email}</div>
+                  <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
+                    Profile
+                  </Link>
+                  <Link href="/lab" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
+                    Lab
+                  </Link>
+                  <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
+                    Pricing
+                  </Link>
+                  <div className="h-px my-1 bg-white/10" />
+                  <button onClick={logout} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </nav>
       </div>
-      {email && <div className="text-xs text-white/60 container pb-2">Signed in as {email}</div>}
     </header>
   );
 }
