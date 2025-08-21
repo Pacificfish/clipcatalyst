@@ -95,16 +95,16 @@ export default function Header(){
               >
                 <span className="text-sm font-medium">{initial || '•'}</span>
               </button>
-              {open && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white/5 ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
-                  <div className="px-3 py-2 text-xs text-white/60">Signed in as {email}</div>
-                  <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">Profile</Link>
-                  <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">Pricing</Link>
+                {open && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white/90 text-black ring-1 ring-black/5 backdrop-blur-md shadow-xl p-1">
+                  <div className="px-3 py-2 text-xs text-black/60">Signed in as {email}</div>
+                  <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5">Profile</Link>
+                  <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5">Pricing</Link>
                   {isPaid && (
-                    <button onClick={openBillingPortal} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">Manage billing</button>
+                    <button onClick={openBillingPortal} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5">Manage billing</button>
                   )}
-                  <div className="h-px my-1 bg-white/10" />
-                  <button onClick={logout} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">Sign out</button>
+                  <div className="h-px my-1 bg-black/10" />
+                  <button onClick={logout} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-black/5">Sign out</button>
                 </div>
               )}
             </div>
