@@ -39,6 +39,9 @@ html, body { background: var(--bg); color: var(--text); }
 [data-theme='light'] .btn { border-color: rgba(0,0,0,0.15); color: #0F172A; background: rgba(0,0,0,0.04); }
 [data-theme='light'] .btn:hover { background: rgba(0,0,0,0.08); }
 
+/* Invert everything in light theme per request */
+html[data-theme='light'] { filter: invert(1) hue-rotate(180deg); }
+
 :root{
   --bg: #0A0F1F;
   --card: rgba(255,255,255,.05);

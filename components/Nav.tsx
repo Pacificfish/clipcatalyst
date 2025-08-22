@@ -93,14 +93,13 @@ export default function Nav() {
           <button aria-label="Toggle theme" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} onClick={toggleTheme} className="btn">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
-          <Link href="/lab" className="btn">Lab</Link>
           {!session ? (
             <div className="flex items-center gap-2">
               <button onClick={loginWithGoogle} className="btn">Sign in with Google</button>
               <button onClick={login} className="btn">Email link</button>
             </div>
           ) : (
-            <div className="relative" ref={menuRef}>
+            <div className="relative flex items-center" ref={menuRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/90 hover:bg-white/20 backdrop-blur-md"
@@ -109,14 +108,18 @@ export default function Nav() {
               >
                 <span className="text-sm font-medium">{initial || '•'}</span>
               </button>
+              <button
+                onClick={() => setOpen(v => !v)}
+                aria-label="Toggle profile menu"
+                className="ml-1 inline-flex h-9 items-center justify-center px-2 rounded-md text-white/80 hover:text-white"
+              >
+                ▾
+              </button>
               {open && (
                 <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[rgba(10,15,31,0.9)] text-white ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
                   <div className="px-3 py-2 text-xs text-white/70">Signed in as {email}</div>
                   <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
                     Profile
-                  </Link>
-                  <Link href="/lab" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
-                    Lab
                   </Link>
                   <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
                     Pricing

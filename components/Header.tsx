@@ -105,9 +105,8 @@ export default function Header(){
             <Link href="/lab" className="btn-primary">Get Started</Link>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
-            <Link href="/lab" className="btn">Lab</Link>
-            <div className="relative" ref={menuRef}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center" ref={menuRef}>
               <button
                 onClick={() => setOpen(v => !v)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/90 hover:bg-white/20 backdrop-blur-md"
@@ -115,6 +114,13 @@ export default function Header(){
                 aria-expanded={open}
               >
                 <span className="text-sm font-medium">{initial || '•'}</span>
+              </button>
+              <button
+                onClick={() => setOpen(v => !v)}
+                aria-label="Toggle profile menu"
+                className="ml-1 inline-flex h-9 items-center justify-center px-2 rounded-md text-white/80 hover:text-white"
+              >
+                ▾
               </button>
                 {open && (
                 <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[rgba(10,15,31,0.9)] text-white ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
