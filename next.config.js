@@ -17,11 +17,15 @@ module.exports = {
       'app/api/render/route.ts': [
         'node_modules/ffmpeg-static/**',
         'node_modules/ffprobe-static/**',
+        'node_modules/@ffmpeg-installer/**',
+        'node_modules/@ffprobe-installer/**',
         ...extraIncludes,
       ],
       'lib/renderVideo.ts': [
         'node_modules/ffmpeg-static/**',
         'node_modules/ffprobe-static/**',
+        'node_modules/@ffmpeg-installer/**',
+        'node_modules/@ffprobe-installer/**',
         ...extraIncludes,
       ],
     },

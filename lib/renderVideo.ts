@@ -22,13 +22,19 @@ try {
     '/var/task/node_modules/ffmpeg-static/ffmpeg',
     require('path').join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg')
   )
+  let set = false
   for (const p of candidates) {
     if (p && require('fs').existsSync(p)) {
       // eslint-disable-next-line no-console
       console.log('[render] using ffmpeg at', p)
       ffmpeg.setFfmpegPath(p)
+      set = true
       break
     }
+  }
+  if (!set) {
+    // eslint-disable-next-line no-console
+    console.warn('[render] ffmpeg not found in candidates:', candidates)
   }
 } catch {}
 
@@ -50,13 +56,19 @@ try {
     require('path').join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
     '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe'
   )
+  let setProbe = false
   for (const p of probeCandidates) {
     if (p && require('fs').existsSync(p)) {
       // eslint-disable-next-line no-console
       console.log('[render] using ffprobe at', p)
       ffmpeg.setFfprobePath(p)
+      setProbe = true
       break
     }
+  }
+  if (!setProbe) {
+    // eslint-disable-next-line no-console
+    console.warn('[render] ffprobe not found in candidates:', probeCandidates)
   }
 } catch {}
 
