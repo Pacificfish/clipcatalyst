@@ -1,26 +1,29 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import ffmpegStaticPath from 'ffmpeg-static'
 import ffmpegLib from 'fluent-ffmpeg'
-import ffprobeStatic from 'ffprobe-static'
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
-import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 
 const ffmpeg = ffmpegLib
-// Resolve ffmpeg binary path robustly for serverless
+
+// Resolve ffmpeg binary path robustly for serverless using optional requires
 try {
-  const candidates: string[] = [
-    // Prefer installer-provided binaries
-    (ffmpegInstaller as any)?.path,
+  const candidates: string[] = []
+  try {
+    const mod = (eval('require'))('@ffmpeg-installer/ffmpeg')
+    if (mod?.path) candidates.push(mod.path)
+  } catch {}
+  try {
+    const p = (eval('require'))('ffmpeg-static')
+    if (p && typeof p === 'string') candidates.push(p as string)
+  } catch {}
+  // Common serverless locations
+  candidates.push(
     '/var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
-    // Static package fallbacks
-    path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
     '/var/task/node_modules/ffmpeg-static/ffmpeg',
-  ].filter(Boolean) as string[]
-  if (ffmpegStaticPath && typeof ffmpegStaticPath === 'string') candidates.push(ffmpegStaticPath as unknown as string)
+    require('path').join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg')
+  )
   for (const p of candidates) {
-    if (p && fs.existsSync(p)) {
+    if (p && require('fs').existsSync(p)) {
       // eslint-disable-next-line no-console
       console.log('[render] using ffmpeg at', p)
       ffmpeg.setFfmpegPath(p)
@@ -29,22 +32,26 @@ try {
   }
 } catch {}
 
-// Resolve ffprobe path if available
+// Resolve ffprobe path with optional requires
 try {
   const probeCandidates: string[] = []
-  const exp = (ffprobeStatic as any)?.path as string | undefined
-  const inst = (ffprobeInstaller as any)?.path as string | undefined
-  if (inst) probeCandidates.push(inst)
-  if (exp) probeCandidates.push(exp)
-  // Common locations
+  try {
+    const mod = (eval('require'))('@ffprobe-installer/ffprobe')
+    if (mod?.path) probeCandidates.push(mod.path)
+  } catch {}
+  try {
+    const st = (eval('require'))('ffprobe-static')
+    if (st?.path) probeCandidates.push(st.path)
+  } catch {}
+  // Common serverless locations
   probeCandidates.push(
     '/var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe',
-    path.join(process.cwd(), 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
-    path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
+    require('path').join(process.cwd(), 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
+    require('path').join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
     '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe'
   )
   for (const p of probeCandidates) {
-    if (p && fs.existsSync(p)) {
+    if (p && require('fs').existsSync(p)) {
       // eslint-disable-next-line no-console
       console.log('[render] using ffprobe at', p)
       ffmpeg.setFfprobePath(p)
