@@ -24,6 +24,9 @@ function parseArgs() {
     if (k === '--out') { out.out = v; i++; continue; }
     if (k === '--bg') { if (v) out.bgs.push(v); i++; continue; }
     if (k === '--music') { out.music = v; i++; continue; }
+    if (k === '--preset') { out.preset = v; i++; continue; }
+    if (k === '--title') { out.title = v; i++; continue; }
+    if (k === '--logo') { out.logo = v; i++; continue; }
     if (k === '--no-subs') { out.noSubs = true; continue; }
   }
   return out;
@@ -172,7 +175,7 @@ async function main() {
     const totalMs = Math.max(durMs, (events.at(-1)?.end || 5000));
     totalSec = Math.max(1, Math.ceil(totalMs / 1000));
     // generate a solid background color (dark) for the computed duration
-    cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${totalSec}`);
+    cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${totalSec}`).inputFormat('lavfi');
     videoInput = '[0:v]';
   }
   cmd.input(audio);
