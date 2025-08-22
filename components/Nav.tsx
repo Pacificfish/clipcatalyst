@@ -36,7 +36,7 @@ export default function Nav() {
   useEffect(() => {
     const t = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null
     if (t && t !== theme) setTheme(t)
-  }, [])
+  }, [theme])
 
   async function login() {
     const e = prompt('Enter your email for a magic link:');

@@ -37,7 +37,7 @@ export default function Header(){
   useEffect(() => {
     const t = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null
     if (t && t !== theme) setTheme(t)
-  }, [])
+  }, [theme])
 
   async function login(){
     const e = prompt('Enter your email for a magic link:')
@@ -131,6 +131,7 @@ export default function Header(){
             </div>
           </div>
         )}
+        </div>
       </div>
       <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
     </header>
