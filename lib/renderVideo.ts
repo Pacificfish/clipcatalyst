@@ -1,18 +1,24 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import ffmpegPath from 'ffmpeg-static'
+import ffmpegStaticPath from 'ffmpeg-static'
 import ffmpegLib from 'fluent-ffmpeg'
-import ffprobePkg from 'ffprobe-static'
+import ffprobeStatic from 'ffprobe-static'
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
+import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 
 const ffmpeg = ffmpegLib
 // Resolve ffmpeg binary path robustly for serverless
 try {
   const candidates: string[] = [
+    // Prefer installer-provided binaries
+    (ffmpegInstaller as any)?.path,
+    '/var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
+    // Static package fallbacks
     path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
     '/var/task/node_modules/ffmpeg-static/ffmpeg',
-  ]
-  if (ffmpegPath && typeof ffmpegPath === 'string') candidates.push(ffmpegPath as unknown as string)
+  ].filter(Boolean) as string[]
+  if (ffmpegStaticPath && typeof ffmpegStaticPath === 'string') candidates.push(ffmpegStaticPath as unknown as string)
   for (const p of candidates) {
     if (p && fs.existsSync(p)) {
       // eslint-disable-next-line no-console
@@ -26,10 +32,14 @@ try {
 // Resolve ffprobe path if available
 try {
   const probeCandidates: string[] = []
-  const exp = (ffprobePkg as any)?.path as string | undefined
+  const exp = (ffprobeStatic as any)?.path as string | undefined
+  const inst = (ffprobeInstaller as any)?.path as string | undefined
+  if (inst) probeCandidates.push(inst)
   if (exp) probeCandidates.push(exp)
   // Common locations
   probeCandidates.push(
+    '/var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe',
+    path.join(process.cwd(), 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
     path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
     '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe'
   )
