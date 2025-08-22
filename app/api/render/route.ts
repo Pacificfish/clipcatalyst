@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto'
 import { renderVideo } from '@/lib/renderVideo'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
