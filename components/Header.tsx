@@ -1,5 +1,5 @@
-// components/Header.tsx
 'use client'
+// components/Header.tsx
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
