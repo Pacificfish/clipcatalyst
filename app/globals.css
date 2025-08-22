@@ -3,11 +3,41 @@
 @tailwind utilities;
 
 :root { color-scheme: dark; }
+/* Theme variables */
+:root{
+  --bg: #0A0F1F;
+  --card: rgba(255,255,255,.05);
+  --card-ring: rgba(255,255,255,.08);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.65);
+  --brand: #00D1FF; /* cyan */
+  --brand-2: #7C4DFF; /* purple accent */
+}
+
+/* Light theme overrides */
+[data-theme='light']{ color-scheme: light; }
+[data-theme='light'] :root{
+  --bg: #F8FAFC; /* slate-50 */
+  --text: #0F172A; /* slate-900 */
+  --muted: #334155; /* slate-600 */
+  --card: rgba(255,255,255,.75);
+  --card-ring: rgba(0,0,0,.08);
+}
+
 body { @apply bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 min-h-screen antialiased; }
 .container { @apply mx-auto max-w-6xl px-4; }
 .btn { @apply text-xs px-3 py-1 rounded-full border border-white/15 text-neutral-200 hover:text-white hover:bg-white/10; }
 .btn-primary { @apply px-5 py-2 rounded-xl bg-white text-black hover:bg-white/90 text-sm; }
 .card { @apply rounded-2xl bg-white/5 ring-1 ring-white/10 shadow-xl; }
+
+/* Apply theme variables */
+html, body { background: var(--bg); color: var(--text); }
+
+/* Light mode component tweaks */
+[data-theme='light'] .header-frost { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.12); }
+[data-theme='light'] .card { background: var(--card); box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+[data-theme='light'] .btn { border-color: rgba(0,0,0,0.15); color: #0F172A; background: rgba(0,0,0,0.04); }
+[data-theme='light'] .btn:hover { background: rgba(0,0,0,0.08); }
 
 :root{
   --bg: #0A0F1F;

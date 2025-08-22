@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 export default function Nav() {
   const [session, setSession] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (typeof document !== 'undefined' ? ((document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'dark') : 'dark'));
   const menuRef = useRef<HTMLDivElement>(null);
   const email = session?.user?.email ?? '';
   const plan = String(session?.user?.user_metadata?.plan || 'Free');
@@ -30,6 +31,12 @@ export default function Nav() {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // Keep local theme state in sync if changed elsewhere
+  useEffect(() => {
+    const t = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null
+    if (t && t !== theme) setTheme(t)
+  }, [])
 
   async function login() {
     const e = prompt('Enter your email for a magic link:');
@@ -67,6 +74,15 @@ export default function Nav() {
 
   async function logout() { await supabase.auth.signOut(); setOpen(false); }
 
+  function toggleTheme(){
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', next)
+    }
+    try { localStorage.setItem('theme', next) } catch {}
+  }
+
   const initial = email ? email.charAt(0).toUpperCase() : '';
 
   return (
@@ -74,6 +90,9 @@ export default function Nav() {
       <div className="container py-3 flex items-center gap-4">
         <Link href="/" className="font-semibold">ClipCatalyst</Link>
         <nav className="ml-auto flex items-center gap-2">
+          <button aria-label="Toggle theme" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} onClick={toggleTheme} className="btn">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           <Link href="/lab" className="btn">Lab</Link>
           {!session ? (
             <div className="flex items-center gap-2">

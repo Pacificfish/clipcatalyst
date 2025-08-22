@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 export default function Header(){
   const [session, setSession] = useState<any>(null)
   const [open, setOpen] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (typeof document !== 'undefined' ? ((document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'dark') : 'dark'))
   const menuRef = useRef<HTMLDivElement>(null)
   const email = session?.user?.email ?? ''
   const plan = String(session?.user?.user_metadata?.plan || 'Free')
@@ -31,6 +32,12 @@ export default function Header(){
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
+
+  // Sync local theme state
+  useEffect(() => {
+    const t = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null
+    if (t && t !== theme) setTheme(t)
+  }, [])
 
   async function login(){
     const e = prompt('Enter your email for a magic link:')
@@ -64,6 +71,16 @@ export default function Header(){
   }
 
   async function logout(){ await supabase.auth.signOut(); setOpen(false) }
+
+  function toggleTheme(){
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', next)
+    }
+    try { localStorage.setItem('theme', next) } catch {}
+  }
+
   const initial = email ? email.charAt(0).toUpperCase() : ''
 
   return (
@@ -78,6 +95,10 @@ export default function Header(){
           <Link href="/pricing">Pricing</Link>
           <Link href="/lab" className="text-white">Lab</Link>
         </nav>
+        <div className="flex items-center gap-3">
+          <button aria-label="Toggle theme" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} onClick={toggleTheme} className="btn">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         {!session ? (
           <div className="flex items-center gap-3">
             <button onClick={loginWithGoogle} className="btn">Sign in</button>

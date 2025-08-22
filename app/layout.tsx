@@ -51,6 +51,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
+        {/* Theme init script to avoid flash */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: `(() => { try { const ls = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const t = ls || (prefersDark ? 'dark' : 'light'); document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();` }}
+        />
         {children}
         <script
           type="application/ld+json"
