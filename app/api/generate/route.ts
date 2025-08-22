@@ -140,6 +140,9 @@ Write a compelling 30–60s script and matching time-coded captions for vertical
 Return ONLY JSON per the schema.
 `.trim()
 
+    // Call OpenAI with a reasonable timeout and bubble up real error details
+    const controller = new AbortController()
+    const to = setTimeout(() => controller.abort(), 40_000)
     const oaRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
@@ -151,12 +154,17 @@ Return ONLY JSON per the schema.
           { role: 'user', content: userPrompt },
         ],
       }),
-    })
+      signal: controller.signal,
+    }).catch((e) => ({ ok: false, status: 0, text: async () => String(e?.message || e) } as any))
+    clearTimeout(to)
     if (!oaRes.ok) {
-      const err = await oaRes.text().catch(() => '')
-      return NextResponse.json({ error: 'OpenAI error', details: err }, { status: 502, headers })
+      const errText = await (oaRes as any).text().catch(() => '')
+      const status = (oaRes as any).status || 500
+      const hint = status === 401 ? 'Invalid OpenAI API key' : status === 429 ? 'Rate limited or quota exceeded' : undefined
+      console.error('OpenAI error', { status, errText })
+      return NextResponse.json({ error: 'OpenAI error', details: errText, status, hint }, { status: 502, headers })
     }
-    const oa = await oaRes.json()
+    const oa = await (oaRes as any).json()
     const content: string = oa?.choices?.[0]?.message?.content || ''
     const jsonText = content.slice(content.indexOf('{'), content.lastIndexOf('}') + 1)
     let parsed: GenJSON
