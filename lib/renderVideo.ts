@@ -127,7 +127,8 @@ export async function renderVideo(opts: { audio: string, captions: string, out: 
     videoInput = '[vout]'
   } else {
     const durMs = await getAudioDurationMs(audio)
-    const totalMs = Math.max(durMs, (events.at(-1)?.end || 5000))
+    const last = events.length ? events[events.length - 1] : undefined
+    const totalMs = Math.max(durMs, (last?.end || 5000))
     totalSec = Math.max(1, Math.ceil(totalMs/1000))
     cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${totalSec}`).inputFormat('lavfi')
     videoInput = '[0:v]'

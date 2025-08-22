@@ -172,7 +172,8 @@ async function main() {
     videoInput = '[vout]'; // will be produced by concat/xfade graph
   } else {
     const durMs = await getAudioDurationMs(audio);
-    const totalMs = Math.max(durMs, (events.at(-1)?.end || 5000));
+    const last = events.length ? events[events.length - 1] : undefined;
+    const totalMs = Math.max(durMs, ((last && last.end) || 5000));
     totalSec = Math.max(1, Math.ceil(totalMs / 1000));
     // generate a solid background color (dark) for the computed duration
     cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${totalSec}`).inputFormat('lavfi');
