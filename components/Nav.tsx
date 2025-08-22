@@ -116,7 +116,7 @@ export default function Nav() {
                 ▾
               </button>
               {open && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[rgba(10,15,31,0.9)] text-white ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
+                <div className="absolute right-0 top-full mt-2 z-[999] w-56 rounded-2xl bg-[rgba(10,15,31,0.9)] text-white ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
                   <div className="px-3 py-2 text-xs text-white/70">Signed in as {email}</div>
                   <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
                     Profile
