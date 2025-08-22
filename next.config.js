@@ -25,8 +25,6 @@ module.exports = {
         ...extraIncludes,
       ],
     },
-    serverComponentsExternalPackages: ['fluent-ffmpeg', 'ffmpeg-static', 'ffprobe-static'],
   },
-  serverExternalPackages: ['fluent-ffmpeg', 'ffmpeg-static', 'ffprobe-static'],
 }
 

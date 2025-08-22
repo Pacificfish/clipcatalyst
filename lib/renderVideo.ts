@@ -9,6 +9,24 @@ const ffmpeg = ffmpegLib
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath as unknown as string)
 if ((ffprobePkg as any)?.path) ffmpeg.setFfprobePath((ffprobePkg as any).path)
 
+// Debug: verify ffmpeg binary exists in deployment
+try {
+  const p = ffmpegPath as unknown as string | undefined
+  if (p) {
+    // eslint-disable-next-line no-console
+    console.log('[render] ffmpeg path:', p)
+    // If not found, try common traced fallback paths
+    if (!fs.existsSync(p)) {
+      const alt1 = path.join(process.cwd(), '.next', 'server', 'app', 'api', 'render', 'ffmpeg')
+      const alt2 = path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg')
+      // eslint-disable-next-line no-console
+      console.log('[render] ffmpeg not found at default. Trying fallbacks:', alt1, alt2)
+      if (fs.existsSync(alt1)) ffmpeg.setFfmpegPath(alt1)
+      else if (fs.existsSync(alt2)) ffmpeg.setFfmpegPath(alt2)
+    }
+  }
+} catch {}
+
 function parseCsv(line: string){
   const parts: string[] = []
   let cur = ''
