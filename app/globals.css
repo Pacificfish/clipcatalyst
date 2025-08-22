@@ -42,7 +42,7 @@ html, body { background: var(--bg); color: var(--text); }
 [data-theme='light'] .btn:hover { background: rgba(0,0,0,0.22); }
 
 /* Invert everything in light theme and slightly reduce brightness/contrast */
-html[data-theme='light'] { filter: invert(1) hue-rotate(180deg) brightness(0.90) contrast(0.96); }
+html[data-theme='light'] { filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.95); }
 
 :root{
   --bg: #0A0F1F;
