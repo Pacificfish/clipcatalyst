@@ -6,23 +6,39 @@ import ffmpegLib from 'fluent-ffmpeg'
 import ffprobePkg from 'ffprobe-static'
 
 const ffmpeg = ffmpegLib
-if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath as unknown as string)
-if ((ffprobePkg as any)?.path) ffmpeg.setFfprobePath((ffprobePkg as any).path)
-
-// Debug: verify ffmpeg binary exists in deployment
+// Resolve ffmpeg binary path robustly for serverless
 try {
-  const p = ffmpegPath as unknown as string | undefined
-  if (p) {
-    // eslint-disable-next-line no-console
-    console.log('[render] ffmpeg path:', p)
-    // If not found, try common traced fallback paths
-    if (!fs.existsSync(p)) {
-      const alt1 = path.join(process.cwd(), '.next', 'server', 'app', 'api', 'render', 'ffmpeg')
-      const alt2 = path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg')
+  const candidates: string[] = [
+    path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+    '/var/task/node_modules/ffmpeg-static/ffmpeg',
+  ]
+  if (ffmpegPath && typeof ffmpegPath === 'string') candidates.push(ffmpegPath as unknown as string)
+  for (const p of candidates) {
+    if (p && fs.existsSync(p)) {
       // eslint-disable-next-line no-console
-      console.log('[render] ffmpeg not found at default. Trying fallbacks:', alt1, alt2)
-      if (fs.existsSync(alt1)) ffmpeg.setFfmpegPath(alt1)
-      else if (fs.existsSync(alt2)) ffmpeg.setFfmpegPath(alt2)
+      console.log('[render] using ffmpeg at', p)
+      ffmpeg.setFfmpegPath(p)
+      break
+    }
+  }
+} catch {}
+
+// Resolve ffprobe path if available
+try {
+  const probeCandidates: string[] = []
+  const exp = (ffprobePkg as any)?.path as string | undefined
+  if (exp) probeCandidates.push(exp)
+  // Common locations
+  probeCandidates.push(
+    path.join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
+    '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe'
+  )
+  for (const p of probeCandidates) {
+    if (p && fs.existsSync(p)) {
+      // eslint-disable-next-line no-console
+      console.log('[render] using ffprobe at', p)
+      ffmpeg.setFfprobePath(p)
+      break
     }
   }
 } catch {}
