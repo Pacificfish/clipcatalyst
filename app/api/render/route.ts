@@ -3,7 +3,9 @@ import { writeFile, mkdtemp, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import path from 'path'
 import { randomUUID } from 'crypto'
-import { spawn } from 'child_process'
+import { renderVideo } from '@/lib/renderVideo'
+
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,31 +54,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const cmd = 'node'
-    const args = [
-      path.join(process.cwd(), 'scripts', 'render.js'),
-      '--audio', audioPath,
-      '--captions', csvPath,
-      '--out', outPath,
-      ...bgList.flatMap((p) => ['--bg', p]),
-      ...(musicPath ? ['--music', musicPath] : []),
-      ...(preset ? ['--preset', String(preset)] : []),
-      ...(title ? ['--title', String(title)] : []),
-      ...(logoPath ? ['--logo', logoPath] : []),
-      // Temporarily disable ASS subtitles to avoid segfaults; we still render title/progress
-      '--no-subs',
-    ]
-
-    // Run render script and stream ffmpeg output to server logs for diagnosis
-    const child = spawn(cmd, args, { env: process.env, cwd: process.cwd() })
-    let outBuf = ''
-    let errBuf = ''
-    child.stdout.on('data', (d) => { const s = d.toString(); outBuf += s; console.log(s.trimEnd()) })
-    child.stderr.on('data', (d) => { const s = d.toString(); errBuf += s; console.error(s.trimEnd()) })
-    const exitCode: number = await new Promise((resolve) => child.on('close', resolve as any))
-    if (exitCode !== 0) {
-      const msg = errBuf || outBuf || `render exited with code ${exitCode}`
-      return new Response(JSON.stringify({ error: msg }), { status: 500 })
+    // Run render in-process to ensure ffmpeg-static is available in the bundled function
+    try {
+      await renderVideo({
+        audio: audioPath,
+        captions: csvPath,
+        out: outPath,
+        bgs: bgList,
+        music: musicPath || undefined,
+        preset: preset || undefined,
+        title: title || undefined,
+        logo: logoPath || undefined,
+        noSubs: true, // keep disabled for stability; can enable later
+      })
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e?.message || 'Render failed' }), { status: 500 })
     }
 
     const buf = await readFile(outPath)
