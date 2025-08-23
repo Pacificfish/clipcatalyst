@@ -133,8 +133,18 @@ function resolveExecutablePathSync(kind: 'ffmpeg'|'ffprobe'){
 try {
   // eslint-disable-next-line no-console
   console.log('[render] cwd', process.cwd(), 'node', process.version)
-  let ff = process.env.FFMPEG_PATH || resolveExecutablePathSync('ffmpeg')
-  if (!ff) ff = await ensureDownloaded('ffmpeg', vendoredHttpUrls('ffmpeg'))
+  const { existsSync } = require('fs')
+  const { spawnSync } = require('child_process')
+  const vendorFfmpeg = '/var/task/public/bin/linux-x64/ffmpeg'
+  function runnable(p: string){ try { return existsSync(p) && !spawnSync(p, ['-version'], { stdio: 'ignore' }).error } catch { return false } }
+
+  let ff: string = ''
+  if (runnable(vendorFfmpeg)) {
+    ff = vendorFfmpeg
+  } else {
+    ff = process.env.FFMPEG_PATH || resolveExecutablePathSync('ffmpeg')
+    if (!ff) ff = await ensureDownloaded('ffmpeg', vendoredHttpUrls('ffmpeg'))
+  }
   if (ff){
     // eslint-disable-next-line no-console
     console.log('[render] using ffmpeg at', ff)
@@ -147,8 +157,18 @@ try {
 
 // Resolve ffprobe path with optional requires
 try {
-  let pr = process.env.FFPROBE_PATH || resolveExecutablePathSync('ffprobe')
-  if (!pr) pr = await ensureDownloaded('ffprobe', vendoredHttpUrls('ffprobe'))
+  const { existsSync } = require('fs')
+  const { spawnSync } = require('child_process')
+  const vendorFfprobe = '/var/task/public/bin/linux-x64/ffprobe'
+  function runnable(p: string){ try { return existsSync(p) && !spawnSync(p, ['-version'], { stdio: 'ignore' }).error } catch { return false } }
+
+  let pr: string = ''
+  if (runnable(vendorFfprobe)) {
+    pr = vendorFfprobe
+  } else {
+    pr = process.env.FFPROBE_PATH || resolveExecutablePathSync('ffprobe')
+    if (!pr) pr = await ensureDownloaded('ffprobe', vendoredHttpUrls('ffprobe'))
+  }
   if (pr){
     // eslint-disable-next-line no-console
     console.log('[render] using ffprobe at', pr)
@@ -169,20 +189,32 @@ async function setupBinariesForRequest(){
       return !r.error
     } catch { return false }
   }
-  let ff = resolveExecutablePathSync('ffmpeg')
-  if (!ff) ff = await ensureDownloaded('ffmpeg')
-  if (ff && !ready(ff)){
-    const dest = '/tmp/ffmpeg'
-    try { copyFileSync(ff, dest); chmodSync(dest, 0o755); if (ready(dest)) ff = dest } catch {}
+  const vendorFfmpeg = '/var/task/public/bin/linux-x64/ffmpeg'
+  let ff = ''
+  if (ready(vendorFfmpeg)) {
+    ff = vendorFfmpeg
+  } else {
+    ff = resolveExecutablePathSync('ffmpeg')
+    if (!ff) ff = await ensureDownloaded('ffmpeg')
+    if (ff && !ready(ff)){
+      const dest = '/tmp/ffmpeg'
+      try { copyFileSync(ff, dest); chmodSync(dest, 0o755); if (ready(dest)) ff = dest } catch {}
+    }
   }
   if (!ff) throw new Error('Cannot find ffmpeg')
   ffmpeg.setFfmpegPath(ff)
 
-  let pr = resolveExecutablePathSync('ffprobe')
-  if (!pr) pr = await ensureDownloaded('ffprobe')
-  if (pr && !ready(pr)){
-    const dest = '/tmp/ffprobe'
-    try { copyFileSync(pr, dest); chmodSync(dest, 0o755); if (ready(dest)) pr = dest } catch {}
+  const vendorFfprobe = '/var/task/public/bin/linux-x64/ffprobe'
+  let pr = ''
+  if (ready(vendorFfprobe)) {
+    pr = vendorFfprobe
+  } else {
+    pr = resolveExecutablePathSync('ffprobe')
+    if (!pr) pr = await ensureDownloaded('ffprobe')
+    if (pr && !ready(pr)){
+      const dest = '/tmp/ffprobe'
+      try { copyFileSync(pr, dest); chmodSync(dest, 0o755); if (ready(dest)) pr = dest } catch {}
+    }
   }
   if (!pr) throw new Error('Cannot find ffprobe')
   ffmpeg.setFfprobePath(pr)
