@@ -1,12 +1,18 @@
 {
   "functions": {
     "app/api/render/route.ts": {
-      "includeFiles": "public/bin/**",
+      "includeFiles": [
+        "public/bin/**",
+        "app/api/render/bin/**"
+      ],
       "maxDuration": 60,
       "memory": 1536
     },
     "app/api/diagnostics/ffmpeg/route.ts": {
-      "includeFiles": "public/bin/**"
+      "includeFiles": [
+        "public/bin/**",
+        "app/api/render/bin/**"
+      ]
     }
   }
 }

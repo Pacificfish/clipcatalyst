@@ -2,6 +2,7 @@
   "name": "clipcatalyst",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/copy-bins.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
