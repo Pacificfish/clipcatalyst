@@ -7,6 +7,7 @@ import { renderVideo } from '@/lib/renderVideo'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const preferredRegion = ['iad1', 'pdx1', 'sfo1']
 
 export async function POST(req: NextRequest) {
   try {

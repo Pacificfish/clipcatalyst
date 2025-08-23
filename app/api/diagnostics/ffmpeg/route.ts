@@ -26,23 +26,39 @@ export async function GET(){
 
   const candidatesFfmpeg = [
     envFFMPEG,
+    // Vendored in repo
+    path.join(cwd, 'public', 'bin', 'linux-x64', 'ffmpeg'),
+    '/var/task/public/bin/linux-x64/ffmpeg',
+    // Vendored near route
+    path.join(cwd, 'app', 'api', 'render', 'bin', 'linux-x64', 'ffmpeg'),
+    '/var/task/app/api/render/bin/linux-x64/ffmpeg',
+    // Installer/static modules
     tryRequire('@ffmpeg-installer/ffmpeg'),
     tryRequire('ffmpeg-static'),
     '/var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
     '/var/task/node_modules/ffmpeg-static/ffmpeg',
     path.join(cwd, 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+    // Traced .next
     path.join(cwd, '.next', 'server', 'app', 'api', 'render', 'ffmpeg'),
     '/var/task/.next/server/app/api/render/ffmpeg'
   ].filter(Boolean) as string[]
 
   const candidatesProbe = [
     envFFPROBE,
+    // Vendored in repo
+    path.join(cwd, 'public', 'bin', 'linux-x64', 'ffprobe'),
+    '/var/task/public/bin/linux-x64/ffprobe',
+    // Vendored near route
+    path.join(cwd, 'app', 'api', 'render', 'bin', 'linux-x64', 'ffprobe'),
+    '/var/task/app/api/render/bin/linux-x64/ffprobe',
+    // Installer/static modules
     tryRequire('@ffprobe-installer/ffprobe'),
     getProp(tryRequire('ffprobe-static'), 'path'),
     '/var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe',
     path.join(cwd, 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
     path.join(cwd, 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
     '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe',
+    // Traced .next
     path.join(cwd, '.next', 'server', 'app', 'api', 'render', 'ffprobe'),
     '/var/task/.next/server/app/api/render/ffprobe'
   ].filter(Boolean) as string[]

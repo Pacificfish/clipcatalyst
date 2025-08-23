@@ -71,6 +71,13 @@ function resolveExecutablePathSync(kind: 'ffmpeg'|'ffprobe'){
   // Common serverless locations
   if (kind === 'ffmpeg'){
     candidates.push(
+      // Vendored binaries in repo (preferred if present)
+      require('path').join(process.cwd(), 'public', 'bin', 'linux-x64', 'ffmpeg'),
+      '/var/task/public/bin/linux-x64/ffmpeg',
+      // Vendored near route (alternative include strategy)
+      require('path').join(process.cwd(), 'app', 'api', 'render', 'bin', 'linux-x64', 'ffmpeg'),
+      '/var/task/app/api/render/bin/linux-x64/ffmpeg',
+      // Installer/static binaries in node_modules
       '/var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
       '/var/task/node_modules/ffmpeg-static/ffmpeg',
       require('path').join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
@@ -80,6 +87,13 @@ function resolveExecutablePathSync(kind: 'ffmpeg'|'ffprobe'){
     )
   } else {
     candidates.push(
+      // Vendored binaries in repo (preferred if present)
+      require('path').join(process.cwd(), 'public', 'bin', 'linux-x64', 'ffprobe'),
+      '/var/task/public/bin/linux-x64/ffprobe',
+      // Vendored near route (alternative include strategy)
+      require('path').join(process.cwd(), 'app', 'api', 'render', 'bin', 'linux-x64', 'ffprobe'),
+      '/var/task/app/api/render/bin/linux-x64/ffprobe',
+      // Installer/static binaries in node_modules
       '/var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe',
       require('path').join(process.cwd(), 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
       require('path').join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),

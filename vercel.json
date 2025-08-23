@@ -4,6 +4,9 @@
       "includeFiles": "public/bin/**",
       "maxDuration": 60,
       "memory": 1536
+    },
+    "app/api/diagnostics/ffmpeg/route.ts": {
+      "includeFiles": "public/bin/**"
     }
   }
 }
