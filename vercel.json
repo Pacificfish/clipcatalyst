@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/render": {
+    "app/api/render/route.ts": {
       "includeFiles": "node_modules/**",
       "maxDuration": 60,
       "memory": 1536
