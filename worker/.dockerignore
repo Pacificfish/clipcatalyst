@@ -1,0 +1,9 @@
+# See https://docs.docker.com/engine/reference/builder/
+node_modules
+npm-debug.log*
+Dockerfile*
+Dockerfile
+.dockerignore
+.git
+.gitignore
+
