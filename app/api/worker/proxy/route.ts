@@ -9,7 +9,10 @@ export async function POST(req: NextRequest){
     const body = await req.text()
     const res = await fetch(worker.replace(/\/$/, '') + '/render', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-shared-secret': process.env.RENDER_WORKER_SECRET || ''
+      },
       body,
     })
     const txt = await res.text()
