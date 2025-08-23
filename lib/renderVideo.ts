@@ -2,6 +2,8 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import ffmpegLib from 'fluent-ffmpeg'
+import ffmpegStaticPath from 'ffmpeg-static'
+import ffprobeStatic from 'ffprobe-static'
 
 const ffmpeg = ffmpegLib
 
@@ -10,6 +12,13 @@ function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
   const envVar = kind === 'ffmpeg' ? process.env.FFMPEG_PATH : process.env.FFPROBE_PATH
   const candidates: string[] = []
   if (envVar && envVar.length) candidates.push(envVar)
+  // Prefer statically imported package paths so Next traces them
+  if (kind === 'ffmpeg'){
+    if (ffmpegStaticPath && typeof ffmpegStaticPath === 'string') candidates.push(ffmpegStaticPath as string)
+  } else {
+    const p = (ffprobeStatic as any)?.path as string | undefined
+    if (p) candidates.push(p)
+  }
   try {
     if (kind === 'ffmpeg'){
       const mod = (eval('require'))('@ffmpeg-installer/ffmpeg')
