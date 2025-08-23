@@ -31,14 +31,20 @@ function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
     candidates.push(
       '/var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg',
       '/var/task/node_modules/ffmpeg-static/ffmpeg',
-      require('path').join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg')
+      require('path').join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+      // Next traced locations
+      require('path').join(process.cwd(), '.next', 'server', 'app', 'api', 'render', 'ffmpeg'),
+      '/var/task/.next/server/app/api/render/ffmpeg'
     )
   } else {
     candidates.push(
       '/var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe',
       require('path').join(process.cwd(), 'node_modules', '@ffprobe-installer', 'linux-x64', 'ffprobe'),
       require('path').join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe'),
-      '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe'
+      '/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe',
+      // Next traced locations
+      require('path').join(process.cwd(), '.next', 'server', 'app', 'api', 'render', 'ffprobe'),
+      '/var/task/.next/server/app/api/render/ffprobe'
     )
   }
 
