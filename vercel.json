@@ -1,7 +1,7 @@
 {
   "functions": {
     "app/api/render/route.ts": {
-      "includeFiles": "node_modules/**",
+      "includeFiles": "public/bin/**",
       "maxDuration": 60,
       "memory": 1536
     }
