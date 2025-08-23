@@ -8,7 +8,38 @@ import ffprobeStatic from 'ffprobe-static'
 const ffmpeg = ffmpegLib
 
 // Resolve ffmpeg binary path robustly for serverless using optional requires
-function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
+async function ensureDownloaded(kind: 'ffmpeg'|'ffprobe'){
+  const urls = kind === 'ffmpeg'
+    ? [
+        'https://github.com/Animenosekai/ffmpeg-ffprobe-static/releases/download/6.1/ffmpeg-linux-x64',
+        'https://raw.githubusercontent.com/serverlesspub/ffmpeg-ffprobe-static/main/bin/linux/x64/ffmpeg'
+      ]
+    : [
+        'https://github.com/Animenosekai/ffmpeg-ffprobe-static/releases/download/6.1/ffprobe-linux-x64',
+        'https://raw.githubusercontent.com/serverlesspub/ffmpeg-ffprobe-static/main/bin/linux/x64/ffprobe'
+      ]
+  const dest = `/tmp/${kind}`
+  const { existsSync, chmodSync } = require('fs')
+  const { spawnSync } = require('child_process')
+  if (existsSync(dest)){
+    const r = spawnSync(dest, ['-version'], { stdio: 'ignore' })
+    if (!r.error) return dest
+  }
+  for (const u of urls){
+    try {
+      const res = await fetch(u)
+      if (!res.ok) continue
+      const buf = Buffer.from(await res.arrayBuffer())
+      require('fs').writeFileSync(dest, buf)
+      chmodSync(dest, 0o755)
+      const r = spawnSync(dest, ['-version'], { stdio: 'ignore' })
+      if (!r.error) return dest
+    } catch {}
+  }
+  return ''
+}
+
+function resolveExecutablePathSync(kind: 'ffmpeg'|'ffprobe'){
   const envVar = kind === 'ffmpeg' ? process.env.FFMPEG_PATH : process.env.FFPROBE_PATH
   const candidates: string[] = []
   if (envVar && envVar.length) candidates.push(envVar)
@@ -75,7 +106,8 @@ function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
 try {
   // eslint-disable-next-line no-console
   console.log('[render] cwd', process.cwd(), 'node', process.version)
-  const ff = resolveExecutablePath('ffmpeg')
+  let ff = resolveExecutablePathSync('ffmpeg')
+  if (!ff) ff = await ensureDownloaded('ffmpeg')
   if (ff){
     // eslint-disable-next-line no-console
     console.log('[render] using ffmpeg at', ff)
@@ -88,7 +120,8 @@ try {
 
 // Resolve ffprobe path with optional requires
 try {
-  const pr = resolveExecutablePath('ffprobe')
+  let pr = resolveExecutablePathSync('ffprobe')
+  if (!pr) pr = await ensureDownloaded('ffprobe')
   if (pr){
     // eslint-disable-next-line no-console
     console.log('[render] using ffprobe at', pr)
