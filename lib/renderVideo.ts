@@ -189,13 +189,13 @@ async function setupBinariesForRequest(){
       return !r.error
     } catch { return false }
   }
-  const vendorFfmpeg = '/var/task/public/bin/linux-x64/ffmpeg'
+  const vendorFfmpeg = '/var/task/public/bin/linux-x64/ffmpeg' 
   let ff = ''
   if (ready(vendorFfmpeg)) {
     ff = vendorFfmpeg
   } else {
-    ff = resolveExecutablePathSync('ffmpeg')
-    if (!ff) ff = await ensureDownloaded('ffmpeg')
+    ff = process.env.FFMPEG_PATH || resolveExecutablePathSync('ffmpeg')
+    if (!ff) ff = await ensureDownloaded('ffmpeg', vendoredHttpUrls('ffmpeg'))
     if (ff && !ready(ff)){
       const dest = '/tmp/ffmpeg'
       try { copyFileSync(ff, dest); chmodSync(dest, 0o755); if (ready(dest)) ff = dest } catch {}
@@ -209,8 +209,8 @@ async function setupBinariesForRequest(){
   if (ready(vendorFfprobe)) {
     pr = vendorFfprobe
   } else {
-    pr = resolveExecutablePathSync('ffprobe')
-    if (!pr) pr = await ensureDownloaded('ffprobe')
+    pr = process.env.FFPROBE_PATH || resolveExecutablePathSync('ffprobe')
+    if (!pr) pr = await ensureDownloaded('ffprobe', vendoredHttpUrls('ffprobe'))
     if (pr && !ready(pr)){
       const dest = '/tmp/ffprobe'
       try { copyFileSync(pr, dest); chmodSync(dest, 0o755); if (ready(dest)) pr = dest } catch {}
