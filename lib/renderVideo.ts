@@ -62,6 +62,8 @@ function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
 }
 
 try {
+  // eslint-disable-next-line no-console
+  console.log('[render] cwd', process.cwd(), 'node', process.version)
   const ff = resolveExecutablePath('ffmpeg')
   if (ff){
     // eslint-disable-next-line no-console
