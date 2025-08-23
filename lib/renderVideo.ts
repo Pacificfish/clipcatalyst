@@ -43,12 +43,12 @@ async function ensureDownloaded(kind: 'ffmpeg'|'ffprobe', extraUrls: string[] = 
 }
 
 function vendoredHttpUrls(kind: 'ffmpeg'|'ffprobe'){
-  const host = process.env.VERCEL_URL
-  if (!host) return [] as string[]
+  const base = process.env.VIDEO_BASE || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+  if (!base) return [] as string[]
   const name = kind === 'ffmpeg' ? 'ffmpeg' : 'ffprobe'
   return [
-    `https://${host}/bin/linux-x64/${name}`,
-    `https://${host}/public/bin/linux-x64/${name}`
+    `${base}/bin/linux-x64/${name}`,
+    `${base}/public/bin/linux-x64/${name}`
   ]
 }
 

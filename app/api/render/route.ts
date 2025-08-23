@@ -56,6 +56,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Derive base URL for self-hosted binary download fallback
+    const host = req.headers.get('host') || ''
+    if (host) process.env.VIDEO_BASE = `https://${host}`
+
     // Run render in-process to ensure ffmpeg-static is available in the bundled function
     try {
       await renderVideo({
