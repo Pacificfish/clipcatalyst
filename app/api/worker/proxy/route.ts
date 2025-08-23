@@ -15,6 +15,17 @@ export async function POST(req: NextRequest){
       },
       body,
     })
+
+    // If worker returned an error, unwrap the body for easier debugging
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      const ct = res.headers.get('content-type') || ''
+      return new Response(
+        JSON.stringify({ error: 'worker error', status: res.status, contentType: ct, body: txt.slice(0, 2000) }),
+        { status: res.status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      )
+    }
+
     const headers = new Headers()
     const ct = res.headers.get('content-type') || undefined
     const cd = res.headers.get('content-disposition') || undefined
@@ -25,7 +36,7 @@ export async function POST(req: NextRequest){
     headers.set('Cache-Control', 'no-store')
     return new Response(res.body, { status: res.status, headers })
   } catch (e: any){
-    return new Response(JSON.stringify({ error: e?.message || 'proxy error' }), { status: 500 })
+    return new Response(JSON.stringify({ error: e?.message || 'proxy error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }
 
