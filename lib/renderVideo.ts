@@ -146,6 +146,35 @@ try {
   }
 } catch {}
 
+async function setupBinariesForRequest(){
+  const { existsSync, copyFileSync, chmodSync } = require('fs')
+  const { spawnSync } = require('child_process')
+  function ready(p: string){
+    try {
+      if (!p || !existsSync(p)) return false
+      const r = spawnSync(p, ['-version'], { stdio: 'ignore' })
+      return !r.error
+    } catch { return false }
+  }
+  let ff = resolveExecutablePathSync('ffmpeg')
+  if (!ff) ff = await ensureDownloaded('ffmpeg')
+  if (ff && !ready(ff)){
+    const dest = '/tmp/ffmpeg'
+    try { copyFileSync(ff, dest); chmodSync(dest, 0o755); if (ready(dest)) ff = dest } catch {}
+  }
+  if (!ff) throw new Error('Cannot find ffmpeg')
+  ffmpeg.setFfmpegPath(ff)
+
+  let pr = resolveExecutablePathSync('ffprobe')
+  if (!pr) pr = await ensureDownloaded('ffprobe')
+  if (pr && !ready(pr)){
+    const dest = '/tmp/ffprobe'
+    try { copyFileSync(pr, dest); chmodSync(dest, 0o755); if (ready(dest)) pr = dest } catch {}
+  }
+  if (!pr) throw new Error('Cannot find ffprobe')
+  ffmpeg.setFfprobePath(pr)
+}
+
 function parseCsv(line: string){
   const parts: string[] = []
   let cur = ''
@@ -254,6 +283,9 @@ export async function renderVideo(opts: { audio: string, captions: string, out: 
   const events = csvToEvents(csvText)
   const ass = buildAss(events, preset)
   fs.writeFileSync(assPath, ass, 'utf8')
+
+  // Ensure binaries are set at request time as well (some platforms lazy-init modules)
+  await setupBinariesForRequest()
 
   const cmd = ffmpeg()
   let videoInput: string
