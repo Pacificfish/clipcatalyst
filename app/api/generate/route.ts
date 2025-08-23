@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 import { htmlToText } from '@/lib/htmlToText'
 import crypto from 'crypto'
 import { getAllowanceForPlan, currentPeriodStart } from '@/lib/credits'
@@ -57,6 +57,7 @@ export async function POST(req: Request) {
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
+const supabaseAdmin = getSupabaseAdmin()
     const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token)
     if (userErr || !userData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
     const user = userData.user

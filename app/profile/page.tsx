@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Nav from '@/components/Nav';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 export default function ProfilePage() {
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();

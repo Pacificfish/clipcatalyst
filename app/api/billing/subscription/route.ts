@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
 
+const supabaseAdmin = getSupabaseAdmin()
     const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token)
     if (userErr || !userData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
     const email = (userData.user.email || '').toLowerCase()

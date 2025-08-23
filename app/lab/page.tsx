@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Nav from '@/components/Nav';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 
 type GenerateResult = {
@@ -33,6 +33,7 @@ export default function LabPage() {
   const [bgUrlManual, setBgUrlManual] = useState('');
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();

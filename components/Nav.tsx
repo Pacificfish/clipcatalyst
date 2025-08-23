@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 export default function Nav() {
   const [session, setSession] = useState<any>(null);
@@ -13,6 +13,7 @@ export default function Nav() {
   const isPaid = plan.toLowerCase() !== 'free';
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
@@ -41,12 +42,14 @@ export default function Nav() {
   async function login() {
     const e = prompt('Enter your email for a magic link:');
     if (!e) return;
+    const supabase = getSupabaseClient();
     const { error } = await supabase.auth.signInWithOtp({ email: e });
     if (error) alert(error.message);
     else alert('Check your email for the magic link.');
   }
 
   async function loginWithGoogle() {
+    const supabase = getSupabaseClient();
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -72,7 +75,7 @@ export default function Nav() {
     }
   }
 
-  async function logout() { await supabase.auth.signOut(); setOpen(false); }
+  async function logout() { const supabase = getSupabaseClient(); await supabase.auth.signOut(); setOpen(false); }
 
   function toggleTheme(){
     const next = theme === 'dark' ? 'light' : 'dark'

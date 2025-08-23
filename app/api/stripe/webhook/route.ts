@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,6 +28,8 @@ export async function POST(req: Request) {
     } catch (err: any) {
       return NextResponse.json({ error: `Invalid signature: ${err.message}` }, { status: 400 })
     }
+
+    const supabaseAdmin = getSupabaseAdmin()
 
     switch (event.type) {
       case 'checkout.session.completed':
@@ -66,7 +68,7 @@ export async function POST(req: Request) {
         if (!plan || !email) return NextResponse.json({ ok: true, note: 'Missing plan or email; no-op' })
 
         // Find the user by email
-        // Search for user by email using admin API
+// Search for user by email using admin API
         const { data: list1, error: uerr1 } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 100 }) as any
         if (uerr1) return NextResponse.json({ error: uerr1.message }, { status: 500 })
         const user = list1?.users?.find((u: any) => (u.email || '').toLowerCase() === email)
