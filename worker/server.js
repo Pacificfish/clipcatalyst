@@ -6,16 +6,59 @@ import path from 'path';
 import crypto from 'crypto';
 import ffmpegLib from 'fluent-ffmpeg';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { spawnSync } from 'child_process';
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 
-ffmpegLib.setFfmpegPath(process.env.FFMPEG_PATH || '/usr/bin/ffmpeg');
-ffmpegLib.setFfprobePath(process.env.FFPROBE_PATH || '/usr/bin/ffprobe');
+function firstRunnable(candidates = []){
+  for (const p of candidates){
+    if (!p) continue;
+    try { const r = spawnSync(p, ['-version'], { stdio: 'ignore' }); if (!r.error) return p } catch {}
+  }
+  return ''
+}
+
+function resolveFfmpeg(){
+  const env = process.env.FFMPEG_PATH
+  let candidates = [env, '/usr/bin/ffmpeg']
+  try { const mod = await (async () => (await import('@ffmpeg-installer/ffmpeg')).default)(); if (mod?.path) candidates.push(mod.path) } catch {}
+  try { candidates.push('ffmpeg') } catch {}
+  const p = firstRunnable(candidates)
+  if (!p) throw new Error('Cannot find ffmpeg')
+  return p
+}
+
+function resolveFfprobe(){
+  const env = process.env.FFPROBE_PATH
+  let candidates = [env, '/usr/bin/ffprobe']
+  try { const mod = await (async () => (await import('@ffprobe-installer/ffprobe')).default)(); if (mod?.path) candidates.push(mod.path) } catch {}
+  try { candidates.push('ffprobe') } catch {}
+  const p = firstRunnable(candidates)
+  if (!p) throw new Error('Cannot find ffprobe')
+  return p
+}
+
+let ffmpegPath = ''
+let ffprobePath = ''
+try { ffmpegPath = resolveFfmpeg() } catch {}
+try { ffprobePath = resolveFfprobe() } catch {}
+if (ffmpegPath) ffmpegLib.setFfmpegPath(ffmpegPath)
+if (ffprobePath) ffmpegLib.setFfprobePath(ffprobePath)
 
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
 app.get('/healthz', (_, res) => res.send('ok'));
+app.get('/diag', (req, res) => {
+  const out = {
+    ffmpegPath,
+    ffprobePath,
+    ffmpegRunnable: Boolean(firstRunnable([ffmpegPath])),
+    ffprobeRunnable: Boolean(firstRunnable([ffprobePath])),
+    env: { FFMPEG_PATH: process.env.FFMPEG_PATH || '', FFPROBE_PATH: process.env.FFPROBE_PATH || '' }
+  }
+  res.json(out)
+});
 
 app.post('/render', async (req, res) => {
   try {
