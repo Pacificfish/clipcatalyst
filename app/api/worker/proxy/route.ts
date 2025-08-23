@@ -15,8 +15,15 @@ export async function POST(req: NextRequest){
       },
       body,
     })
-    const txt = await res.text()
-    return new Response(txt, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'application/json' } })
+    const headers = new Headers()
+    const ct = res.headers.get('content-type') || undefined
+    const cd = res.headers.get('content-disposition') || undefined
+    const cl = res.headers.get('content-length') || undefined
+    if (ct) headers.set('Content-Type', ct)
+    if (cd) headers.set('Content-Disposition', cd)
+    if (cl) headers.set('Content-Length', cl)
+    headers.set('Cache-Control', 'no-store')
+    return new Response(res.body, { status: res.status, headers })
   } catch (e: any){
     return new Response(JSON.stringify({ error: e?.message || 'proxy error' }), { status: 500 })
   }

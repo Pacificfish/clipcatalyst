@@ -175,7 +175,7 @@ export default function LabPage() {
         } catch {}
       }
 
-      const res = await fetch('/api/render', {
+const res = await fetch('/api/worker/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mp3_url: result.mp3_url, csv_url: result.csv_url, ...(bgUrlManual.trim() ? { bg_url: bgUrlManual.trim() } : (bg_urls && bg_urls.length ? { bg_urls } : {})), ...(musicUrl.trim() ? { music_url: musicUrl.trim() } : {}), preset: useTikTokPreset ? 'tiktok_v1' : undefined, title, ...(logoUrl.trim() ? { logo_url: logoUrl.trim() } : {}) }),
@@ -494,7 +494,7 @@ function ProjectsGrid({ token }: { token?: string }) {
                         }
                       } catch {}
 
-                      const res = await fetch('/api/render', {
+const res = await fetch('/api/worker/proxy', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ mp3_url: p.mp3_url, csv_url: p.csv_url, ...(bg_urls && bg_urls.length ? { bg_urls } : {}), preset: 'tiktok_v1', title: p.title || 'Clip' }),
