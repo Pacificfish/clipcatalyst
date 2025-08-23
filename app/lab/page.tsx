@@ -185,6 +185,16 @@ const res = await fetch('/api/worker/proxy', {
         const txt = await res.text().catch(() => '');
         throw new Error(`Render failed: ${txt || res.status}`);
       }
+      const ctype = res.headers.get('content-type') || ''
+      if (ctype.includes('application/json')) {
+        const data = await res.json().catch(() => ({}))
+        const url = data?.url
+        if (url) {
+          window.location.href = url
+          return
+        }
+        throw new Error(`Unexpected JSON from renderer: ${JSON.stringify(data)}`)
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -503,6 +513,15 @@ const res = await fetch('/api/worker/proxy', {
                       if (!res.ok) {
                         const txt = await res.text().catch(() => '');
                         throw new Error(`Render failed: ${txt || res.status}`);
+                      }
+                      const ctype = res.headers.get('content-type') || ''
+                      if (ctype.includes('application/json')){
+                        const data = await res.json().catch(() => ({}))
+                        if (data?.url){
+                          window.location.href = data.url
+                          return
+                        }
+                        throw new Error(`Unexpected JSON from renderer: ${JSON.stringify(data)}`)
                       }
                       const blob = await res.blob();
                       const url = URL.createObjectURL(blob);
