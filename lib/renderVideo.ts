@@ -7,7 +7,9 @@ const ffmpeg = ffmpegLib
 
 // Resolve ffmpeg binary path robustly for serverless using optional requires
 function resolveExecutablePath(kind: 'ffmpeg'|'ffprobe'){
+  const envVar = kind === 'ffmpeg' ? process.env.FFMPEG_PATH : process.env.FFPROBE_PATH
   const candidates: string[] = []
+  if (envVar && envVar.length) candidates.push(envVar)
   try {
     if (kind === 'ffmpeg'){
       const mod = (eval('require'))('@ffmpeg-installer/ffmpeg')
@@ -71,7 +73,7 @@ try {
     ffmpeg.setFfmpegPath(ff)
   } else {
     // eslint-disable-next-line no-console
-    console.warn('[render] ffmpeg not found; checked common installer/static paths')
+    console.warn('[render] ffmpeg not found; set FFMPEG_PATH env to absolute binary path (e.g., /var/task/node_modules/@ffmpeg-installer/linux-x64/ffmpeg)')
   }
 } catch {}
 
@@ -84,7 +86,7 @@ try {
     ffmpeg.setFfprobePath(pr)
   } else {
     // eslint-disable-next-line no-console
-    console.warn('[render] ffprobe not found; checked common installer/static paths')
+    console.warn('[render] ffprobe not found; set FFPROBE_PATH env to absolute binary path (e.g., /var/task/node_modules/@ffprobe-installer/linux-x64/ffprobe)')
   }
 } catch {}
 
