@@ -70,7 +70,20 @@ export async function POST(req: NextRequest) {
         noSubs: true, // keep disabled for stability; can enable later
       })
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e?.message || 'Render failed' }), { status: 500 })
+      try {
+        const fs = await import('fs')
+        const { spawnSync } = await import('child_process') as any
+        const envPath = process.env.FFMPEG_PATH || ''
+        const vendor = '/var/task/public/bin/linux-x64/ffmpeg'
+        const existsEnv = envPath ? fs.existsSync(envPath) : false
+        const existsVend = fs.existsSync(vendor)
+        const runEnv = envPath ? !spawnSync(envPath, ['-version'], { stdio: 'ignore' }).error : false
+        const runVend = !spawnSync(vendor, ['-version'], { stdio: 'ignore' }).error
+        const dirList = (() => { try { return fs.readdirSync('/var/task/public/bin/linux-x64') } catch (err: any) { return String(err?.message || err) } })()
+        return new Response(JSON.stringify({ error: e?.message || 'Render failed', debug: { cwd: process.cwd(), envFFMPEG_PATH: envPath, existsEnv, existsVend, runEnv, runVend, dirList } }), { status: 500 })
+      } catch {
+        return new Response(JSON.stringify({ error: e?.message || 'Render failed' }), { status: 500 })
+      }
     }
 
     const buf = await readFile(outPath)
