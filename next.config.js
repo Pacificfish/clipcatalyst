@@ -20,14 +20,6 @@ module.exports = {
   },
   experimental: {
     outputFileTracingIncludes: {
-      'app/api/render/route.ts': [
-        'node_modules/ffmpeg-static/**',
-        'node_modules/ffprobe-static/**',
-        'node_modules/@ffmpeg-installer/**',
-        'node_modules/@ffprobe-installer/**',
-        'public/bin/**',
-        ...extraIncludes,
-      ],
       'lib/renderVideo.ts': [
         'node_modules/ffmpeg-static/**',
         'node_modules/ffprobe-static/**',

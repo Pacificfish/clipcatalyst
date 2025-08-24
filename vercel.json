@@ -3,11 +3,6 @@
     { "source": "/api/render", "destination": "/api/worker/proxy" }
   ],
   "functions": {
-    "app/api/render/route.ts": {
-      "includeFiles": "public/bin/**",
-      "maxDuration": 60,
-      "memory": 1536
-    },
     "app/api/diagnostics/ffmpeg/route.ts": {
       "includeFiles": "public/bin/**"
     }
