@@ -20,9 +20,10 @@ export async function POST(req: NextRequest){
     u.searchParams.set('ts', String(ts))
 
     // 307 preserves method and body; browser will POST body directly to worker
-    const res = Response.redirect(u.toString(), 307)
-    res.headers.set('x-redirect', 'proxy->worker')
-    return res
+    return new Response(null, {
+      status: 307,
+      headers: { Location: u.toString(), 'x-redirect': 'proxy->worker' }
+    })
 
     // If worker returned an error, unwrap the body for easier debugging
     if (!res.ok) {
