@@ -86,16 +86,76 @@ app.post('/render', async (req, res) => {
     fs.writeFileSync(audioPath, Buffer.from(await mp3.arrayBuffer()));
     fs.writeFileSync(csvPath, Buffer.from(await csv.arrayBuffer()));
 
+    // Optional first background video
+    let bgPath = ''
+    if (Array.isArray(bg_urls) && bg_urls.length){
+      try {
+        const rbg = await fetch(bg_urls[0])
+        if (rbg.ok){
+          bgPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+          fs.writeFileSync(bgPath, Buffer.from(await rbg.arrayBuffer()))
+        }
+      } catch {}
+    }
+
+    // Build ASS captions from CSV
+    function parseCsvLine(line){
+      const parts=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ;continue}if(ch===','&&!inQ){parts.push(cur);cur='';continue}cur+=ch}parts.push(cur);return parts}
+    function hmsToMs(t){const seg=String(t).trim();const pts=seg.split(':').map(Number);if(pts.some(x=>Number.isNaN(x)))return null;let h=0,m=0,s=0;if(pts.length===2){[m,s]=pts}else if(pts.length===3){[h,m,s]=pts}else return null;return((h*60+m)*60+s)*1000}
+    function csvToEvents(text){const lines=String(text).trim().split(/\r?\n/).filter(Boolean);if(lines.length===0) return [];const header=lines[0].toLowerCase();const body=(header.includes('time')||header.includes('start')||header.includes('text'))?lines.slice(1):lines;const rows=body.map(parseCsvLine).filter(r=>r.length>=2);const ev=[];if(header.includes('start')&&header.includes('end')){for(const r of rows){const st=Number(r[0])||0;const en=Number(r[1])||Math.max(500,st+1500);const tx=(r.slice(2).join(',')||'').trim();ev.push({start:st,end:en,text:tx})}return ev}const times=rows.map(r=>hmsToMs(r[0]));for(let i=0;i<rows.length;i++){const t=times[i];if(t==null) continue;const next=times[i+1];const end=next!=null?Math.max(t+500,next):t+1500;const tx=(rows[i].slice(1).join(',')||'').trim();ev.push({start:t,end,text:tx})}return ev}
+    function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
+    function buildAss(events){
+      const isTik = preset==='tiktok_v1'
+      const header = `[\nScript Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: TikTok, Inter, ${isTik?64:56}, &H00FFFFFF, &H000000FF, &H00101010, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, ${isTik?4:3}, ${isTik?2:1}, 2, 80, 80, 200, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
+      function wrapAndEmphasize(text){
+        const MAX = 22, MAX_LINES = 3
+        const words = String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean)
+        const lines = []
+        let cur = ''
+        for (const w of words){
+          const test = cur ? cur + ' ' + w : w
+          if (test.length > MAX && cur){ lines.push(cur); cur = w } else { cur = test }
+        }
+        if (cur) lines.push(cur)
+        if (lines.length > MAX_LINES){
+          const rest = lines.slice(MAX_LINES-1).join(' ')
+          lines.splice(MAX_LINES-1, lines.length-(MAX_LINES-1), rest)
+        }
+        const emphasized = lines.map(line => line.split(' ').map(w => `{\\bord4}\\b1${w}\\b0`).join(' '))
+        return emphasized.join('\\N')
+      }
+      const lines = events.map(e => {
+        const st = msToAss(e.start)
+        const en = msToAss(Math.max(e.end, e.start+500))
+        const txt = wrapAndEmphasize(e.text)
+        return `Dialogue: 0,${st},${en},TikTok,,0,0,0,,{\\an2}${txt}`
+      }).join('\n')
+      return header + lines + '\n'
+    }
+    const csvText = fs.readFileSync(csvPath,'utf8')
+    const assPath = path.join(tmp,'subs.ass')
+    fs.writeFileSync(assPath, buildAss(csvToEvents(csvText)),'utf8')
+
     const cmd = ffmpegLib();
-    cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=15`).inputFormat('lavfi');
-    cmd.input(audioPath);
+    if (bgPath){
+      cmd.input(bgPath)
+    } else {
+      cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=15`).inputFormat('lavfi')
+    }
+    cmd.input(audioPath)
+
+    const assEsc = assPath.replace(/:/g,'\\:').replace(/'/g,"\\'")
+    const vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,format=yuv420p,ass='${assEsc}'`
+    cmd.complexFilter([`[0:v]${vf}[v]`])
+
     cmd.outputOptions([
-      '-map', '0:v', '-map', '1:a',
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
-      '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '192k',
+      '-map','[v]',
+      '-map','1:a',
+      '-c:v','libx264','-preset','medium','-crf','20',
+      '-pix_fmt','yuv420p',
+      '-c:a','aac','-b:a','192k',
       '-shortest'
-    ]);
+    ])
 
     await new Promise((resolve, reject) => {
       cmd.on('start', c => console.log('ffmpeg:', c));
