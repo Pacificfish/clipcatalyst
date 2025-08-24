@@ -35,12 +35,12 @@ export async function POST(req: NextRequest){
     }
 
     const headers = new Headers()
-    const ct = res.headers.get('content-type') || undefined
-    const cd = res.headers.get('content-disposition') || undefined
-    const cl = res.headers.get('content-length') || undefined
-    if (ct) headers.set('Content-Type', ct)
-    if (cd) headers.set('Content-Disposition', cd)
-    if (cl) headers.set('Content-Length', cl)
+    const ct = res.headers.get('content-type') || ''
+    const cd = res.headers.get('content-disposition') || ''
+    const cl = res.headers.get('content-length') || ''
+    if (ct) headers.set('Content-Type', ct as string)
+    if (cd) headers.set('Content-Disposition', cd as string)
+    if (cl) headers.set('Content-Length', cl as string)
     headers.set('Cache-Control', 'no-store')
     headers.set('x-proxy', 'worker-proxy')
     return new Response(res.body, { status: res.status, headers })
