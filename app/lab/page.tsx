@@ -31,6 +31,9 @@ export default function LabPage() {
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('Aesthetic abstract neon waves background, cinematic, soft motion');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [mirrorUrl, setMirrorUrl] = useState('');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -318,6 +321,69 @@ const res = await fetch('/api/worker/proxy', {
               <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
               <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
             </label>
+          </div>
+
+          {/* AI Backgrounds */}
+          <div className="mt-4 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
+            <div className="text-sm font-semibold">AI Backgrounds</div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex flex-col gap-1 sm:col-span-2">
+                <span className="text-xs text-white/60">Generate AI image (OpenAI)</span>
+                <textarea className="w-full h-20 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} />
+              </label>
+              <div className="flex items-end">
+                <button className={`btn ${aiBusy ? 'opacity-60 cursor-not-allowed' : ''}`} disabled={aiBusy} onClick={async ()=>{
+                  if (!session?.access_token) return;
+                  setAiBusy(true)
+                  try {
+                    const r = await fetch('/api/ai/image', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                      body: JSON.stringify({ prompt: aiPrompt, aspect_ratio: '9:16', project_id: result?.project_id || `lab-${Date.now()}` })
+                    })
+                    const data = await r.json().catch(()=>({}))
+                    if (!r.ok) throw new Error(data?.error || 'AI image failed')
+                    if (data?.image_url){ setBgUrlManual(data.image_url); setAutoBroll(false) }
+                  } catch (e:any) {
+                    alert(e?.message || 'AI image failed')
+                  } finally { setAiBusy(false) }
+                }}>Generate Image</button>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex flex-col gap-1 sm:col-span-2">
+                <span className="text-xs text-white/60">Mirror AI video URL to storage (Runway/Luma/Pika etc.)</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://provider.cdn/video.mp4" value={mirrorUrl} onChange={e=>setMirrorUrl(e.target.value)} />
+              </label>
+              <div className="flex items-end">
+                <button className="btn" onClick={async ()=>{
+                  if (!session?.access_token || !mirrorUrl.trim()) return;
+                  setAiBusy(true)
+                  try {
+                    const r = await fetch('/api/ai/mirror', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                      body: JSON.stringify({ url: mirrorUrl.trim(), kind: 'video', project_id: result?.project_id || `lab-${Date.now()}` })
+                    })
+                    const data = await r.json().catch(()=>({}))
+                    if (!r.ok) throw new Error(data?.error || 'Mirror failed')
+                    if (data?.url){ setBgUrlManual(data.url); setAutoBroll(false) }
+                  } catch (e:any) { alert(e?.message || 'Mirror failed') } finally { setAiBusy(false) }
+                }}>Mirror Video</button>
+              </div>
+            </div>
+            {bgUrlManual && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="text-xs text-white/60">Selected background URL:</div>
+                <div className="truncate text-xs"><a className="underline" href={bgUrlManual} target="_blank">{bgUrlManual}</a></div>
+                <div className="sm:col-span-2">
+                  {bgUrlManual.match(/\.(png|jpg|jpeg|webp|svg)(\?|$)/i) ? (
+                    <img src={bgUrlManual} alt="background" className="w-full rounded-md ring-1 ring-white/10" />
+                  ) : (
+                    <video src={bgUrlManual} className="w-full rounded-md ring-1 ring-white/10" controls/>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Generate */}
