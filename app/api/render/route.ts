@@ -1,13 +1,18 @@
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
-export async function POST() {
-  return new Response(
-    JSON.stringify({ error: 'This route has been removed. Use /api/worker/proxy instead.' }),
-    { status: 410, headers: { 'Content-Type': 'application/json' } }
-  )
+function redirectToProxy(req: Request){
+  const u = new URL(req.url)
+  u.pathname = '/api/worker/proxy'
+  const res = Response.redirect(u.toString(), 307)
+  res.headers.set('x-redirect', 'render->worker-proxy')
+  return res
 }
 
-export async function GET() {
-  return new Response('This route has been removed. Use /api/worker/proxy instead.', { status: 410 })
+export async function POST(req: Request) {
+  return redirectToProxy(req)
+}
+
+export async function GET(req: Request) {
+  return redirectToProxy(req)
 }
