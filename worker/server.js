@@ -11,6 +11,25 @@ import { spawnSync } from 'child_process';
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 
+// CORS: allow browser to POST cross-origin from Vercel site to this worker
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  // Reflect requested headers if present; otherwise allow common ones
+  const reqHeaders = req.headers['access-control-request-headers'];
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    reqHeaders ? String(reqHeaders) : 'Content-Type, X-Shared-Secret'
+  );
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 function firstRunnable(candidates = []){
   for (const p of candidates){
     if (!p) continue;
