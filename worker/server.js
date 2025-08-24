@@ -104,37 +104,31 @@ app.post('/render', async (req, res) => {
     function hmsToMs(t){const seg=String(t).trim();const pts=seg.split(':').map(Number);if(pts.some(x=>Number.isNaN(x)))return null;let h=0,m=0,s=0;if(pts.length===2){[m,s]=pts}else if(pts.length===3){[h,m,s]=pts}else return null;return((h*60+m)*60+s)*1000}
     function csvToEvents(text){const lines=String(text).trim().split(/\r?\n/).filter(Boolean);if(lines.length===0) return [];const header=lines[0].toLowerCase();const body=(header.includes('time')||header.includes('start')||header.includes('text'))?lines.slice(1):lines;const rows=body.map(parseCsvLine).filter(r=>r.length>=2);const ev=[];if(header.includes('start')&&header.includes('end')){for(const r of rows){const st=Number(r[0])||0;const en=Number(r[1])||Math.max(500,st+1500);const tx=(r.slice(2).join(',')||'').trim();ev.push({start:st,end:en,text:tx})}return ev}const times=rows.map(r=>hmsToMs(r[0]));for(let i=0;i<rows.length;i++){const t=times[i];if(t==null) continue;const next=times[i+1];const end=next!=null?Math.max(t+500,next):t+1500;const tx=(rows[i].slice(1).join(',')||'').trim();ev.push({start:t,end,text:tx})}return ev}
     function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
-    function buildAss(events){
-      const isTik = preset==='tiktok_v1'
-      const header = `[\nScript Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: TikTok, Inter, ${isTik?64:56}, &H00FFFFFF, &H000000FF, &H00101010, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, ${isTik?4:3}, ${isTik?2:1}, 2, 80, 80, 200, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
-      function wrapAndEmphasize(text){
-        const MAX = 22, MAX_LINES = 3
-        const words = String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean)
-        const lines = []
-        let cur = ''
-        for (const w of words){
-          const test = cur ? cur + ' ' + w : w
-          if (test.length > MAX && cur){ lines.push(cur); cur = w } else { cur = test }
+    // Build "one word at a time" ASS where each word pops in/out
+    function buildWordAss(events){
+      const header = `[\nScript Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 54, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 6, 0, 2, 80, 80, 220, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
+      const outLines = []
+      for (const ev of events){
+        const text = String(ev.text||'').replace(/\s+/g,' ').trim()
+        if (!text) continue
+        const words = text.split(' ').filter(Boolean)
+        const total = Math.max(600, ev.end - ev.start)
+        const per = Math.max(160, Math.floor(total / Math.max(1, words.length)))
+        for (let i=0;i<words.length;i++){
+          const ws = ev.start + i*per
+          const we = (i===words.length-1) ? ev.end : Math.min(ev.end, ws + per)
+          const st = msToAss(ws)
+          const en = msToAss(Math.max(ws+120, we))
+          // Bottom center, pop in/out with scale and slight fade
+          const tag = `{\\an2\\bord6\\fad(60,80)\\fscx70\\fscy70\\t(0,120,\\fscx115\\fscy115)\\t(120,240,\\fscx100\\fscy100)}`
+          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
         }
-        if (cur) lines.push(cur)
-        if (lines.length > MAX_LINES){
-          const rest = lines.slice(MAX_LINES-1).join(' ')
-          lines.splice(MAX_LINES-1, lines.length-(MAX_LINES-1), rest)
-        }
-        const emphasized = lines.map(line => line.split(' ').map(w => `{\\bord4}\\b1${w}\\b0`).join(' '))
-        return emphasized.join('\\N')
       }
-      const lines = events.map(e => {
-        const st = msToAss(e.start)
-        const en = msToAss(Math.max(e.end, e.start+500))
-        const txt = wrapAndEmphasize(e.text)
-        return `Dialogue: 0,${st},${en},TikTok,,0,0,0,,{\\an2}${txt}`
-      }).join('\n')
-      return header + lines + '\n'
+      return header + outLines.join('\n') + '\n'
     }
     const csvText = fs.readFileSync(csvPath,'utf8')
     const assPath = path.join(tmp,'subs.ass')
-    fs.writeFileSync(assPath, buildAss(csvToEvents(csvText)),'utf8')
+    fs.writeFileSync(assPath, buildWordAss(csvToEvents(csvText)),'utf8')
 
     const cmd = ffmpegLib();
     if (bgPath){
