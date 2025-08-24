@@ -25,26 +25,13 @@ export async function POST(req: NextRequest){
       headers: { Location: u.toString(), 'x-redirect': 'proxy->worker' }
     })
 
-    // If worker returned an error, unwrap the body for easier debugging
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '')
-      const ct = res.headers.get('content-type') || ''
-      return new Response(
-        JSON.stringify({ error: 'worker error', status: res.status, contentType: ct, body: txt.slice(0, 2000) }),
-        { status: res.status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'x-proxy': 'worker-proxy' } }
-      )
-    }
+    // (Note: following code path was used before streaming proxy; left for reference)
+    // If you ever switch back from redirect to fetch, restore this section accordingly.
+    // const workerRes = await fetch(workerUrl, { method: 'POST', headers, body })
+    // if (!workerRes.ok) { ... }
 
-    const headers = new Headers()
-    const ct = res.headers.get('content-type') || ''
-    const cd = res.headers.get('content-disposition') || ''
-    const cl = res.headers.get('content-length') || ''
-    if (ct) headers.set('Content-Type', ct as string)
-    if (cd) headers.set('Content-Disposition', cd as string)
-    if (cl) headers.set('Content-Length', cl as string)
-    headers.set('Cache-Control', 'no-store')
-    headers.set('x-proxy', 'worker-proxy')
-    return new Response(res.body, { status: res.status, headers })
+    // Unreachable after redirect
+    return new Response(JSON.stringify({ error: 'unreachable' }), { status: 500 })
   } catch (e: any){
     return new Response(JSON.stringify({ error: e?.message || 'proxy error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
