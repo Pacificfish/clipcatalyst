@@ -19,21 +19,27 @@ function firstRunnable(candidates = []){
   return ''
 }
 
-function resolveFfmpeg(){
+async function resolveFfmpeg(){
   const env = process.env.FFMPEG_PATH
   let candidates = [env, '/usr/bin/ffmpeg']
-  try { const mod = await (async () => (await import('@ffmpeg-installer/ffmpeg')).default)(); if (mod?.path) candidates.push(mod.path) } catch {}
-  try { candidates.push('ffmpeg') } catch {}
+  try {
+    const mod = (await import('@ffmpeg-installer/ffmpeg')).default
+    if (mod?.path) candidates.push(mod.path)
+  } catch {}
+  candidates.push('ffmpeg')
   const p = firstRunnable(candidates)
   if (!p) throw new Error('Cannot find ffmpeg')
   return p
 }
 
-function resolveFfprobe(){
+async function resolveFfprobe(){
   const env = process.env.FFPROBE_PATH
   let candidates = [env, '/usr/bin/ffprobe']
-  try { const mod = await (async () => (await import('@ffprobe-installer/ffprobe')).default)(); if (mod?.path) candidates.push(mod.path) } catch {}
-  try { candidates.push('ffprobe') } catch {}
+  try {
+    const mod = (await import('@ffprobe-installer/ffprobe')).default
+    if (mod?.path) candidates.push(mod.path)
+  } catch {}
+  candidates.push('ffprobe')
   const p = firstRunnable(candidates)
   if (!p) throw new Error('Cannot find ffprobe')
   return p
@@ -41,8 +47,8 @@ function resolveFfprobe(){
 
 let ffmpegPath = ''
 let ffprobePath = ''
-try { ffmpegPath = resolveFfmpeg() } catch {}
-try { ffprobePath = resolveFfprobe() } catch {}
+try { ffmpegPath = await resolveFfmpeg() } catch {}
+try { ffprobePath = await resolveFfprobe() } catch {}
 if (ffmpegPath) ffmpegLib.setFfmpegPath(ffmpegPath)
 if (ffprobePath) ffmpegLib.setFfprobePath(ffprobePath)
 
