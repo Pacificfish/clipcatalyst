@@ -69,8 +69,23 @@ app.get('/diag', (req, res) => {
 app.post('/render', async (req, res) => {
   try {
     const required = process.env.SHARED_SECRET
-    if (required && req.header('x-shared-secret') !== required){
-      return res.status(403).json({ error: 'forbidden' })
+    const token = req.query && (req.query.token || req.query.t)
+    const ts = req.query && (req.query.ts || req.query.time)
+    let ok = false
+    if (required){
+      if (req.header('x-shared-secret') === required) ok = true
+      else if (token && ts){
+        try {
+          const now = Math.floor(Date.now()/1000)
+          const tnum = parseInt(String(ts),10)
+          if (Math.abs(now - tnum) < 600){
+            const cryptoNode = await import('crypto')
+            const h = cryptoNode.createHmac('sha256', required).update(String(ts)).digest('hex')
+            if (h === token) ok = true
+          }
+        } catch {}
+      }
+      if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
     const { mp3_url, csv_url, bg_urls = [], preset = 'tiktok_v1', title } = req.body || {};
@@ -85,6 +100,18 @@ app.post('/render', async (req, res) => {
     if (!mp3.ok || !csv.ok) return res.status(400).json({ error: 'Failed to fetch inputs' });
     fs.writeFileSync(audioPath, Buffer.from(await mp3.arrayBuffer()));
     fs.writeFileSync(csvPath, Buffer.from(await csv.arrayBuffer()));
+
+    // Probe audio duration so we can match video length
+    const audioSeconds = await new Promise((resolve)=>{
+      try {
+        ffmpegLib.ffprobe(audioPath, (err, data)=>{
+          if (err) return resolve(0)
+          const s = (data && data.format && data.format.duration) ? Number(data.format.duration) : 0
+          resolve(Math.max(0, Math.floor(s)))
+        })
+      } catch { resolve(0) }
+    })
+    const outSeconds = Math.max(1, audioSeconds || 0)
 
     // Optional first background video
     let bgPath = ''
@@ -106,7 +133,7 @@ app.post('/render', async (req, res) => {
     function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
     // Build "one word at a time" ASS where each word pops in/out
     function buildWordAss(events){
-      const header = `[\nScript Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 54, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 6, 0, 2, 80, 80, 220, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
+      const header = `[\nScript Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 46, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 8, 0, 2, 80, 80, 280, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
       const outLines = []
       for (const ev of events){
         const text = String(ev.text||'').replace(/\s+/g,' ').trim()
@@ -120,21 +147,25 @@ app.post('/render', async (req, res) => {
           const st = msToAss(ws)
           const en = msToAss(Math.max(ws+120, we))
           // Bottom center, pop in/out with scale and slight fade
-          const tag = `{\\an2\\bord6\\fad(60,80)\\fscx70\\fscy70\\t(0,120,\\fscx115\\fscy115)\\t(120,240,\\fscx100\\fscy100)}`
+          const tag = `{\\an2\\bord8\\fad(60,100)\\fscx60\\fscy60\\t(0,140,\\fscx130\\fscy130)\\t(140,320,\\fscx100\\fscy100)}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
         }
       }
       return header + outLines.join('\n') + '\n'
     }
     const csvText = fs.readFileSync(csvPath,'utf8')
+    const eventsArr = csvToEvents(csvText)
+    const lastEndMs = eventsArr.length ? Math.max(...eventsArr.map(e=>e.end)) : 0
+    const derivedSeconds = Math.ceil((lastEndMs||0)/1000)
+    const finalSeconds = Math.max(outSeconds, derivedSeconds)
     const assPath = path.join(tmp,'subs.ass')
-    fs.writeFileSync(assPath, buildWordAss(csvToEvents(csvText)),'utf8')
+    fs.writeFileSync(assPath, buildWordAss(eventsArr),'utf8')
 
     const cmd = ffmpegLib();
     if (bgPath){
-      cmd.input(bgPath)
+      cmd.input(bgPath).inputOptions(['-stream_loop','-1'])
     } else {
-      cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=15`).inputFormat('lavfi')
+      cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${finalSeconds}`).inputFormat('lavfi')
     }
     cmd.input(audioPath)
 
@@ -148,7 +179,7 @@ app.post('/render', async (req, res) => {
       '-c:v','libx264','-preset','medium','-crf','20',
       '-pix_fmt','yuv420p',
       '-c:a','aac','-b:a','192k',
-      '-shortest'
+      '-t', String(finalSeconds)
     ])
 
     await new Promise((resolve, reject) => {

@@ -1,20 +1,28 @@
 import { NextRequest } from 'next/server'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest){
   try {
     const worker = process.env.RENDER_WORKER_URL
     if (!worker) return new Response(JSON.stringify({ error: 'RENDER_WORKER_URL not set' }), { status: 500 })
-    const body = await req.text()
-    const res = await fetch(worker.replace(/\/$/, '') + '/render', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-shared-secret': process.env.RENDER_WORKER_SECRET || ''
-      },
-      body,
-    })
+
+    // Redirect the client directly to the worker with a short-lived signed token to avoid proxy timeouts
+    const ts = Math.floor(Date.now()/1000)
+    const secret = process.env.RENDER_WORKER_SECRET || ''
+    let token = ''
+    try {
+      const crypto = await import('crypto')
+      token = crypto.createHmac('sha256', secret).update(String(ts)).digest('hex')
+    } catch {}
+    const u = new URL(worker.replace(/\/$/, '') + '/render')
+    u.searchParams.set('t', token)
+    u.searchParams.set('ts', String(ts))
+
+    // 307 preserves method and body; browser will POST body directly to worker
+    const res = Response.redirect(u.toString(), 307)
+    res.headers.set('x-redirect', 'proxy->worker')
+    return res
 
     // If worker returned an error, unwrap the body for easier debugging
     if (!res.ok) {
