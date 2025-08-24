@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/api/render", "destination": "/api/worker/proxy" }
+  ],
   "functions": {
     "app/api/render/route.ts": {
       "includeFiles": "public/bin/**",
