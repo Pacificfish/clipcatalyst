@@ -107,7 +107,10 @@ app.post('/render', async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
-    const { mp3_url, csv_url, bg_urls = [], preset = 'tiktok_v1', title } = req.body || {};
+    const { mp3_url, csv_url, bg_urls = [], bg_url = '', preset = 'tiktok_v1', title } = req.body || {};
+    const bgCandidates = []
+    if (bg_url) bgCandidates.push(bg_url)
+    if (Array.isArray(bg_urls)) bgCandidates.push(...bg_urls)
     if (!mp3_url || !csv_url) return res.status(400).json({ error: 'mp3_url and csv_url are required' });
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
@@ -132,14 +135,24 @@ app.post('/render', async (req, res) => {
     })
     const outSeconds = Math.max(1, audioSeconds || 0)
 
-    // Optional first background video
+    // Optional first background asset (video or image)
     let bgPath = ''
-    if (Array.isArray(bg_urls) && bg_urls.length){
+    let bgKind = 'none' // 'video' | 'image' | 'none'
+    if (bgCandidates.length){
       try {
-        const rbg = await fetch(bg_urls[0])
+        const rbg = await fetch(bgCandidates[0])
         if (rbg.ok){
-          bgPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
-          fs.writeFileSync(bgPath, Buffer.from(await rbg.arrayBuffer()))
+          const ct = String(rbg.headers.get('content-type') || '').toLowerCase()
+          const buf = Buffer.from(await rbg.arrayBuffer())
+          if (ct.startsWith('image/')){
+            bgPath = path.join(tmp, `${crypto.randomUUID()}.png`)
+            fs.writeFileSync(bgPath, buf)
+            bgKind = 'image'
+          } else {
+            bgPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+            fs.writeFileSync(bgPath, buf)
+            bgKind = 'video'
+          }
         }
       } catch {}
     }
@@ -182,7 +195,12 @@ app.post('/render', async (req, res) => {
 
     const cmd = ffmpegLib();
     if (bgPath){
-      cmd.input(bgPath).inputOptions(['-stream_loop','-1'])
+      if (bgKind === 'video') {
+        cmd.input(bgPath).inputOptions(['-stream_loop','-1'])
+      } else if (bgKind === 'image') {
+        // Loop a single image as video background
+        cmd.input(bgPath).inputOptions(['-loop','1'])
+      }
     } else {
       cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${finalSeconds}`).inputFormat('lavfi')
     }
