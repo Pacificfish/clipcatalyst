@@ -22,7 +22,7 @@ export async function POST(req: NextRequest){
       const ct = res.headers.get('content-type') || ''
       return new Response(
         JSON.stringify({ error: 'worker error', status: res.status, contentType: ct, body: txt.slice(0, 2000) }),
-        { status: res.status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+        { status: res.status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'x-proxy': 'worker-proxy' } }
       )
     }
 
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest){
     if (cd) headers.set('Content-Disposition', cd)
     if (cl) headers.set('Content-Length', cl)
     headers.set('Cache-Control', 'no-store')
+    headers.set('x-proxy', 'worker-proxy')
     return new Response(res.body, { status: res.status, headers })
   } catch (e: any){
     return new Response(JSON.stringify({ error: e?.message || 'proxy error' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
