@@ -39,6 +39,8 @@ export default function LabPage() {
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
+  // Preset selector
+  const [preset, setPreset] = useState<'None' | 'Autoclipper'>('None');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -353,9 +355,22 @@ const res = await fetch('/api/worker/proxy', {
 
           {/* Presets */}
           <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-            <div className="text-sm font-semibold">Presets</div>
-            <div className="grid gap-4">
-              {/* Autoclipper */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">Presets</div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-white/60">Select</span>
+                <select className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm" value={preset} onChange={e=>setPreset(e.target.value as any)}>
+                  <option value="None">None</option>
+                  <option value="Autoclipper">Autoclipper (YouTube)</option>
+                </select>
+              </div>
+            </div>
+
+            {preset === 'None' && (
+              <div className="text-xs text-white/60">Choose a preset to configure its options.</div>
+            )}
+
+            {preset === 'Autoclipper' && (
               <div className="space-y-3 rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
                 <div className="text-sm font-semibold">Autoclipper (YouTube)</div>
                 <p className="text-xs text-white/60">Pick the best {autoNumClips}× ~{autoClipSec}s highlights from a long video. Paste a YouTube URL, we’ll fetch the transcript and suggest timestamps.</p>
@@ -389,7 +404,7 @@ const res = await fetch('/api/worker/proxy', {
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Veo3 (feature-gated) */}
