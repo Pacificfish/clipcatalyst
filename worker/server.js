@@ -223,16 +223,17 @@ app.post('/render', async (req, res) => {
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[0]}`)
           continue
         }
-        // Fallback: distribute words across the event interval
-        const total = Math.max(400, ev.end - ev.start)
-        const per = Math.max(100, Math.floor(total / Math.max(1, words.length)))
+        // Fallback: distribute words across the event interval (faster cadence)
+        const total = Math.max(250, ev.end - ev.start)
+        const per = Math.max(60, Math.floor(total / Math.max(1, words.length)))
         for (let i=0;i<words.length;i++){
           const ws = ev.start + i*per
           const we = (i===words.length-1) ? ev.end : Math.min(ev.end, ws + per)
           const st = msToAss(ws)
-          const wordDur = Math.max(80, Math.min(we - ws, Math.floor(per * 0.75)))
+          const wordDur = Math.max(50, Math.min(we - ws, Math.floor(per * 0.6)))
           const en = msToAss(ws + wordDur)
-          const tag = `{\\an2\\bord8\\fad(40,80)\\fscx55\\fscy55\\t(0,90,\\fscx125\\fscy125)\\t(90,180,\\fscx100\\fscy100)}`
+          // Minimal styling; no fades or long transforms to avoid perceived delay
+          const tag = `{\\an2\\bord8}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
         }
       }
