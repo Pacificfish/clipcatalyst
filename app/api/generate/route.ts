@@ -207,13 +207,14 @@ Return ONLY JSON per the schema.
       })
       if (tr.ok) {
         const tj: any = await tr.json().catch(() => null)
-        const wlines = ['start,end,text']
+        type W = { s: number, e: number, t: string }
+        const wordsOut: W[] = []
         const pushWord = (sSec: any, eSec: any, raw: any) => {
           const s = Math.max(0, Math.round(Number(sSec || 0) * 1000))
           let e = Math.round(Number(eSec || 0) * 1000)
           if (!Number.isFinite(e) || e <= s) e = s + 1
-          const text = String(raw || '').trim().replace(/\\\"/g, '""')
-          if (text) wlines.push(`${s},${e},\\"${text}\\"`)
+          const text = String(raw || '').trim()
+          if (text) wordsOut.push({ s, e, t: text })
         }
         if (Array.isArray(tj?.words) && tj.words.length) {
           for (const w of tj.words) pushWord(w?.start, w?.end, w?.word ?? w?.text)
@@ -222,13 +223,15 @@ Return ONLY JSON per the schema.
           for (const seg of tj.segments) {
             const segStart = Number(seg?.start || 0)
             const segEnd = Number(seg?.end || 0)
-            if (Array.isArray(seg?.words) && seg.words.length) {
-              for (const w of seg.words) pushWord(w?.start ?? segStart, w?.end ?? segEnd, w?.word ?? w?.text)
+            if (Array.isArray(seg?.words) && tj.segments) {
+              if (Array.isArray(seg?.words) && seg.words.length) {
+                for (const w of seg.words) pushWord(w?.start ?? segStart, w?.end ?? segEnd, w?.word ?? w?.text)
+              }
             } else {
               const t = String(seg?.text || '').trim()
               const toks = t.split(/\s+/).filter(Boolean)
               const dur = Math.max(0, segEnd - segStart)
-              const per = toks.length ? dur / toks.length : 0
+              const per = toks.length ? dur / Math.max(1, toks.length) : 0
               for (let i=0;i<toks.length;i++) {
                 const s = segStart + i*per
                 const e = i === toks.length-1 ? segEnd : s + per
@@ -237,7 +240,20 @@ Return ONLY JSON per the schema.
             }
           }
         }
-        if (wlines.length > 1) csv = wlines.join('\n')
+        // Remove any delays between words: snap each start to previous end (monotonic, no gaps)
+        wordsOut.sort((a,b)=>a.s-b.s)
+        for (let i=1;i<wordsOut.length;i++){
+          if (wordsOut[i].s > wordsOut[i-1].e) wordsOut[i].s = wordsOut[i-1].e
+          if (wordsOut[i].e <= wordsOut[i].s) wordsOut[i].e = wordsOut[i].s + 1
+        }
+        if (wordsOut.length){
+          const wlines = ['start,end,text']
+          for (const w of wordsOut){
+            const safe = w.t.replace(/\\\"/g,'""')
+            wlines.push(`${w.s},${w.e},\\"${safe}\\"`)
+          }
+          csv = wlines.join('\n')
+        }
       }
     } catch {}
 
