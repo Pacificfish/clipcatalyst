@@ -35,6 +35,54 @@ function decodeHtmlEntities(s: string): string {
     })
 }
 
+// Helper parsers used throughout
+function parseJson3(j: any){
+  const out: Array<{ start: number; dur: number; text: string }> = []
+  if (!j || !Array.isArray(j.events)) return out
+  for (const ev of j.events){
+    const s = Math.max(0, Math.floor(Number(ev.tStartMs || ev.tstartms || 0)))
+    const d = Math.max(0, Math.floor(Number(ev.dDurationMs || ev.dDurationms || ev.d || 0)))
+    let txt = ''
+    if (Array.isArray(ev.segs)){
+      for (const seg of ev.segs){
+        const t = (seg && typeof seg.utf8 === 'string') ? seg.utf8 : ''
+        txt += t
+      }
+    }
+    txt = (txt || '').replace(/\s+/g, ' ').trim()
+    if (d > 0 && txt){ out.push({ start: s, dur: d, text: txt }) }
+  }
+  return out
+}
+function timeToMs(h: number, m: number, s: number, ms: number){ return (((h*60 + m)*60) + s) * 1000 + ms }
+function parseVtt(vtt: string){
+  const out: Array<{ start: number; dur: number; text: string }> = []
+  const lines = String(vtt || '').replace(/\r/g,'').split('\n')
+  let i=0
+  while (i < lines.length){
+    const l = lines[i].trim()
+    if (/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}/.test(l)){
+      const m = l.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s+-->\s+(\d{2}):(\d{2}):(\d{2})\.(\d{3})/)
+      if (m){
+        const sMs = timeToMs(Number(m[1]),Number(m[2]),Number(m[3]),Number(m[4]))
+        const eMs = timeToMs(Number(m[5]),Number(m[6]),Number(m[7]),Number(m[8]))
+        let text = ''
+        i++
+        while (i < lines.length && lines[i].trim() && !/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->/.test(lines[i])){
+          text += (text ? ' ' : '') + lines[i].trim()
+          i++
+        }
+        text = text.replace(/<[^>]+>/g,'').trim()
+        const dur = Math.max(0, eMs - sMs)
+        if (dur > 0 && text) out.push({ start: sMs, dur: dur, text })
+        continue
+      }
+    }
+    i++
+  }
+  return out
+}
+
 async function fetchTranscript(videoId: string, preferredLang?: string): Promise<Array<{ start: number; dur: number; text: string }>> {
   // Helper: fetch with UA and timeout
   const safeGet = async (url: string) => {
@@ -164,54 +212,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
   const baseLangs = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU', 'en-IN', 'es', 'es-419', 'fr', 'de', 'pt', 'pt-BR', 'ru', 'hi', 'ja', 'ko', 'zh-Hans', 'zh-Hant']
   const langCodes = preferredLang && !baseLangs.includes(preferredLang) ? [preferredLang, ...baseLangs] : (preferredLang ? [preferredLang, ...baseLangs] : baseLangs)
 
-  // Helpers to parse JSON3 and VTT
-  const parseJson3 = (j: any) => {
-    const out: Array<{ start: number; dur: number; text: string }> = []
-    if (!j || !Array.isArray(j.events)) return out
-    for (const ev of j.events){
-      const s = Math.max(0, Math.floor(Number(ev.tStartMs || ev.tstartms || 0)))
-      const d = Math.max(0, Math.floor(Number(ev.dDurationMs || ev.dDurationms || ev.d || 0)))
-      let txt = ''
-      if (Array.isArray(ev.segs)){
-        for (const seg of ev.segs){
-          const t = (seg && typeof seg.utf8 === 'string') ? seg.utf8 : ''
-          txt += t
-        }
-      }
-      txt = (txt || '').replace(/\s+/g, ' ').trim()
-      if (d > 0 && txt){ out.push({ start: s, dur: d, text: txt }) }
-    }
-    return out
-  }
-  const timeToMs = (h: number, m: number, s: number, ms: number) => (((h*60 + m)*60) + s) * 1000 + ms
-  const parseVtt = (vtt: string) => {
-    const out: Array<{ start: number; dur: number; text: string }> = []
-    // Split by cues; basic parser
-    const lines = String(vtt || '').replace(/\r/g,'').split('\n')
-    let i=0
-    while (i < lines.length){
-      const l = lines[i].trim()
-      if (/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}/.test(l)){
-        const m = l.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s+-->\s+(\d{2}):(\d{2}):(\d{2})\.(\d{3})/)
-        if (m){
-          const sMs = timeToMs(Number(m[1]),Number(m[2]),Number(m[3]),Number(m[4]))
-          const eMs = timeToMs(Number(m[5]),Number(m[6]),Number(m[7]),Number(m[8]))
-          let text = ''
-          i++
-          while (i < lines.length && lines[i].trim() && !/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->/.test(lines[i])){
-            text += (text ? ' ' : '') + lines[i].trim()
-            i++
-          }
-          text = text.replace(/<[^>]+>/g,'').trim()
-          const dur = Math.max(0, eMs - sMs)
-          if (dur > 0 && text) out.push({ start: sMs, dur: dur, text })
-          continue
-        }
-      }
-      i++
-    }
-    return out
-  }
+  // Helpers defined above: parseJson3, parseVtt, timeToMs
 
   // Try JSON3, VTT, then XML; manual first then ASR
   for (const lang of langCodes){
