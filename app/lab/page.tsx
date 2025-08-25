@@ -301,13 +301,15 @@ const res = await fetch('/api/worker/proxy', {
             </div>
           </div>
 
-          {/* Title */}
-          <div>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Project title (required)</span>
-              <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </label>
-          </div>
+          {/* Title (hide for Autoclipper) */}
+          {view !== 'Autoclipper' && (
+            <div>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-white/60">Project title (required)</span>
+                <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </label>
+            </div>
+          )}
 
           {/* Source input (shown for Paste/URL) */}
           <div>
@@ -319,23 +321,25 @@ const res = await fetch('/api/worker/proxy', {
             )}
           </div>
 
-          {/* Options */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Language</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Tone</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Topic (optional)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
-            </label>
-          </div>
+          {/* Options (hide for Autoclipper) */}
+          {view !== 'Autoclipper' && (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-white/60">Language</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-white/60">Tone</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-white/60">Topic (optional)</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
+              </label>
+            </div>
+          )}
 
-          {/* Style preset, b‑roll and music */}
+          {/* Style preset, b‑roll and music (hide most when Autoclipper) */}
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
@@ -363,14 +367,16 @@ const res = await fetch('/api/worker/proxy', {
             )}
           </div>
 
-          {/* Generate */}
-          <div className="mt-2 flex items-center gap-3">
-            <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-              {isLoading ? 'Generating…' : 'Generate'}
-            </button>
-            <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
-            {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
-          </div>
+          {/* Generate (hide for Autoclipper) */}
+          {view !== 'Autoclipper' && (
+            <div className="mt-2 flex items-center gap-3">
+              <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                {isLoading ? 'Generating…' : 'Generate'}
+              </button>
+              <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
+              {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
+            </div>
+          )}
 
           {/* Preset configuration below; only show when Autoclipper is chosen */}
           {view === 'Autoclipper' && (
