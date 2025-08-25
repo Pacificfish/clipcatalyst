@@ -168,9 +168,19 @@ app.post('/render', async (req, res) => {
       const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 46, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 8, 0, 2, 80, 80, 220, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
       const outLines = []
       for (const ev of events){
-        const text = String(ev.text||'').replace(/\s+/g,' ').trim()
+        const text = String(ev.text||'').replace(/\\s+/g,' ').trim()
         if (!text) continue
         const words = text.split(' ').filter(Boolean)
+        const hasExact = Number.isFinite(ev.start) && Number.isFinite(ev.end) && ev.end > ev.start
+        if (words.length === 1 && hasExact){
+          // Exact word timing from CSV (start,end in ms)
+          const st = msToAss(ev.start)
+          const en = msToAss(ev.end)
+          const tag = `{\\an2\\bord8\\fad(24,60)\\fscx55\\fscy55\\t(0,80,\\fscx125\\fscy125)\\t(80,160,\\fscx100\\fscy100)}`
+          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[0]}`)
+          continue
+        }
+        // Fallback: distribute words across the event interval
         const total = Math.max(400, ev.end - ev.start)
         const per = Math.max(100, Math.floor(total / Math.max(1, words.length)))
         for (let i=0;i<words.length;i++){
@@ -179,7 +189,6 @@ app.post('/render', async (req, res) => {
           const st = msToAss(ws)
           const wordDur = Math.max(80, Math.min(we - ws, Math.floor(per * 0.75)))
           const en = msToAss(ws + wordDur)
-          // Bottom center, quicker pop with shorter fades and transforms
           const tag = `{\\an2\\bord8\\fad(40,80)\\fscx55\\fscy55\\t(0,90,\\fscx125\\fscy125)\\t(90,180,\\fscx100\\fscy100)}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
         }

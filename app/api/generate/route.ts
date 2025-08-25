@@ -182,13 +182,44 @@ Return ONLY JSON per the schema.
     if (!elRes.ok) { const err = await elRes.text().catch(() => ''); return NextResponse.json({ error: 'ElevenLabs error', details: err }, { status: 502, headers }) }
     const audioBuf = Buffer.from(await elRes.arrayBuffer())
 
+    // Build a basic time,text CSV as fallback
     const lines = ['time,text']
     for (const row of captions) {
       const t = String(row.time || '').replace(/\r?\n/g, ' ').trim()
       const txt = String(row.text || '').replace(/\"/g, '""').replace(/\r?\n/g, ' ').trim()
-      lines.push(`${t},"${txt}"`)
+      lines.push(`${t},\"${txt}\"`)
     }
-    const csv = lines.join('\n')
+    let csv = lines.join('\n')
+
+    // Try word-accurate timings via Whisper (word granularity)
+    try {
+      const fd = new FormData()
+      // Node runtime provides File, Blob via undici
+      const file = new File([audioBuf], 'voiceover.mp3', { type: 'audio/mpeg' })
+      fd.set('file', file)
+      fd.set('model', 'whisper-1')
+      fd.set('response_format', 'verbose_json')
+      fd.append('timestamp_granularities[]', 'word')
+      const tr = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+        body: fd,
+      })
+      if (tr.ok) {
+        const tj: any = await tr.json().catch(() => null)
+        const words: any[] = Array.isArray(tj?.words) ? tj.words : []
+        if (words.length) {
+          const wlines = ['start,end,text']
+          for (const w of words) {
+            const s = Math.max(0, Math.round(Number(w?.start || 0) * 1000))
+            const e = Math.max(s + 40, Math.round(Number(w?.end || 0) * 1000))
+            const text = String(w?.word || w?.text || '').trim().replace(/\"/g, '""')
+            if (text) wlines.push(`${s},${e},\"${text}\"`)
+          }
+          if (wlines.length > 1) csv = wlines.join('\n')
+        }
+      }
+    } catch {}
 
     const safeId = crypto.createHash('sha256').update(email).digest('hex').slice(0, 12)
     const base = `${safeId}/${projectId}`
