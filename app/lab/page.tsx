@@ -32,6 +32,7 @@ export default function LabPage() {
   const [ytUrl, setYtUrl] = useState('');
   const [autoNumClips, setAutoNumClips] = useState(3);
   const [autoClipSec, setAutoClipSec] = useState(30);
+  const [autoLang, setAutoLang] = useState('en');
   const [autoBusy, setAutoBusy] = useState(false);
   const [autoErr, setAutoErr] = useState<string | null>(null);
   const [autoSegments, setAutoSegments] = useState<Array<{ start: number; end: number; text: string }>>([]);
@@ -225,7 +226,7 @@ const res = await fetch('/api/worker/proxy', {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ youtube_url: ytUrl.trim(), max_clips: autoNumClips, target_seconds: autoClipSec }),
+        body: JSON.stringify({ youtube_url: ytUrl.trim(), max_clips: autoNumClips, target_seconds: autoClipSec, language: autoLang }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Autoclip failed');
@@ -398,6 +399,22 @@ const res = await fetch('/api/worker/proxy', {
                   <label className="flex flex-col gap-1">
                     <span className="text-xs text-white/60">Seconds per clip</span>
                     <input type="number" min={8} max={90} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoClipSec} onChange={e=>setAutoClipSec(parseInt(e.target.value || '30',10))} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-white/60">Language</span>
+                    <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoLang} onChange={e=>setAutoLang(e.target.value)}>
+                      <option value="en">English (en)</option>
+                      <option value="es">Spanish (es)</option>
+                      <option value="fr">French (fr)</option>
+                      <option value="de">German (de)</option>
+                      <option value="pt">Portuguese (pt)</option>
+                      <option value="ru">Russian (ru)</option>
+                      <option value="hi">Hindi (hi)</option>
+                      <option value="ja">Japanese (ja)</option>
+                      <option value="ko">Korean (ko)</option>
+                      <option value="zh-Hans">Chinese Simplified (zh-Hans)</option>
+                      <option value="zh-Hant">Chinese Traditional (zh-Hant)</option>
+                    </select>
                   </label>
                 </div>
                 <div className="flex gap-3 items-center">

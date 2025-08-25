@@ -10,6 +10,7 @@ type Payload = {
   youtube_url: string
   max_clips?: number
   target_seconds?: number
+  language?: string // BCP-47, e.g., 'en', 'es', 'fr'
 }
 
 function parseYouTubeId(url: string): string | null {
@@ -34,20 +35,29 @@ function decodeHtmlEntities(s: string): string {
     })
 }
 
-async function fetchTranscript(videoId: string): Promise<Array<{ start: number; dur: number; text: string }>> {
+async function fetchTranscript(videoId: string, preferredLang?: string): Promise<Array<{ start: number; dur: number; text: string }>> {
   // 1) Try the unofficial transcript endpoint first (JSON)
   try {
-    const r = await fetch(`https://youtubetranscript.com/?server_vid2=${encodeURIComponent(videoId)}`)
-    if (r.ok) {
-      const json: any = await r.json().catch(() => null)
-      if (Array.isArray(json?.transcript)) {
-        return json.transcript.map((row: any) => ({ start: Math.floor(Number(row.start) * 1000), dur: Math.floor(Number(row.dur) * 1000), text: String(row.text || '') }))
-      }
+    for (const url of [
+      `https://youtubetranscript.com/?server_vid2=${encodeURIComponent(videoId)}`,
+      `https://youtubetranscript.com/?server_vid=${encodeURIComponent(videoId)}`,
+      `https://youtubetranscript.com/?video_id=${encodeURIComponent(videoId)}`,
+    ]){
+      try {
+        const r = await fetch(url)
+        if (r.ok){
+          const json: any = await r.json().catch(()=>null)
+          if (Array.isArray(json?.transcript)){
+            return json.transcript.map((row: any) => ({ start: Math.floor(Number(row.start) * 1000), dur: Math.floor(Number(row.dur) * 1000), text: String(row.text || '') }))
+          }
+        }
+      } catch {}
     }
   } catch {}
 
   // 2) Fallback to YouTube timedtext (try JSON3, VTT, then XML) for a broader set of English locales
-  const langCodes = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU', 'en-IN']
+  const baseLangs = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU', 'en-IN', 'es', 'es-419', 'fr', 'de', 'pt', 'pt-BR', 'ru', 'hi', 'ja', 'ko', 'zh-Hans', 'zh-Hant']
+  const langCodes = preferredLang && !baseLangs.includes(preferredLang) ? [preferredLang, ...baseLangs] : (preferredLang ? [preferredLang, ...baseLangs] : baseLangs)
 
   // Helpers to parse JSON3 and VTT
   const parseJson3 = (j: any) => {
@@ -200,7 +210,8 @@ export async function POST(req: Request){
     const targetSec = Math.min(120, Math.max(8, Number(body.target_seconds || 30)))
     const windowMs = targetSec * 1000
 
-    const lines = await fetchTranscript(videoId)
+    const preferredLang = (String(body.language || '').trim()) || undefined
+    const lines = await fetchTranscript(videoId, preferredLang)
     if (!lines.length) return NextResponse.json({ error: 'Transcript not available for this video' }, { status: 404, headers })
 
     const scored = scoreSegments(lines, windowMs)
