@@ -171,15 +171,16 @@ app.post('/render', async (req, res) => {
         const text = String(ev.text||'').replace(/\s+/g,' ').trim()
         if (!text) continue
         const words = text.split(' ').filter(Boolean)
-        const total = Math.max(600, ev.end - ev.start)
-        const per = Math.max(160, Math.floor(total / Math.max(1, words.length)))
+        const total = Math.max(400, ev.end - ev.start)
+        const per = Math.max(100, Math.floor(total / Math.max(1, words.length)))
         for (let i=0;i<words.length;i++){
           const ws = ev.start + i*per
           const we = (i===words.length-1) ? ev.end : Math.min(ev.end, ws + per)
           const st = msToAss(ws)
-          const en = msToAss(Math.max(ws+120, we))
-          // Bottom center, pop in/out with scale and slight fade
-          const tag = `{\\an2\\bord8\\fad(60,100)\\fscx60\\fscy60\\t(0,140,\\fscx130\\fscy130)\\t(140,320,\\fscx100\\fscy100)}`
+          const wordDur = Math.max(80, Math.min(we - ws, Math.floor(per * 0.75)))
+          const en = msToAss(ws + wordDur)
+          // Bottom center, quicker pop with shorter fades and transforms
+          const tag = `{\\an2\\bord8\\fad(40,80)\\fscx55\\fscy55\\t(0,90,\\fscx125\\fscy125)\\t(90,180,\\fscx100\\fscy100)}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
         }
       }
