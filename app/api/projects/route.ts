@@ -36,18 +36,28 @@ const supabaseAdmin = getSupabaseAdmin()
       if (!qErr && Array.isArray(rows)) projects = rows
     } catch {}
 
-    if (projects.length === 0) {
-      projects = await Promise.all(
-        folders.map(async (f: any) => {
-          const projectId = String(f.name)
-          const base = `${safeId}/${projectId}`
-          const mp3 = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/voiceover.mp3`).data.publicUrl
-          const csv = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/captions.csv`).data.publicUrl
-          const thumb = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/thumb.svg`).data.publicUrl
-          return { id: projectId, title: projectId, mp3_url: mp3, csv_url: csv, thumb_url: thumb, updated_at: (f as any)?.updated_at || null }
-        })
-      )
+    // Always merge storage-derived folders so newly generated projects appear
+    const existingIds = new Set(projects.map((p: any) => p.id))
+    const derived = await Promise.all(
+      folders.map(async (f: any) => {
+        const projectId = String(f.name)
+        const base = `${safeId}/${projectId}`
+        const mp3 = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/voiceover.mp3`).data.publicUrl
+        const csv = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/captions.csv`).data.publicUrl
+        const thumb = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/thumb.svg`).data.publicUrl
+        return { id: projectId, title: projectId, mp3_url: mp3, csv_url: csv, thumb_url: thumb, updated_at: (f as any)?.updated_at || null }
+      })
+    )
+    for (const d of derived) {
+      if (!existingIds.has(d.id)) projects.push(d)
     }
+
+    // Sort by updated_at desc when possible
+    projects.sort((a: any, b: any) => {
+      const ta = a?.updated_at ? new Date(a.updated_at).getTime() : 0
+      const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0
+      return tb - ta
+    })
 
     return NextResponse.json({ projects }, { headers })
   } catch (e: any) {
