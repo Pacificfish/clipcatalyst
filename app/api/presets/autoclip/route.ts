@@ -21,18 +21,67 @@ function parseYouTubeId(url: string): string | null {
   return null
 }
 
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = parseInt(n, 10)
+      return Number.isFinite(code) ? String.fromCharCode(code) : _
+    })
+}
+
 async function fetchTranscript(videoId: string): Promise<Array<{ start: number; dur: number; text: string }>> {
-  // Try the unofficial transcript endpoint first
+  // 1) Try the unofficial transcript endpoint first (JSON)
   try {
     const r = await fetch(`https://youtubetranscript.com/?server_vid2=${encodeURIComponent(videoId)}`)
     if (r.ok) {
       const json: any = await r.json().catch(() => null)
       if (Array.isArray(json?.transcript)) {
-        // Normalize to ms
         return json.transcript.map((row: any) => ({ start: Math.floor(Number(row.start) * 1000), dur: Math.floor(Number(row.dur) * 1000), text: String(row.text || '') }))
       }
     }
   } catch {}
+
+  // 2) Fallback to YouTube timedtext XML for common English language codes
+  const langCodes = ['en', 'en-US', 'en-GB']
+  const bases = [
+    (lang: string) => `https://www.youtube.com/api/timedtext?lang=${encodeURIComponent(lang)}&v=${encodeURIComponent(videoId)}`,
+    (lang: string) => `https://video.google.com/timedtext?lang=${encodeURIComponent(lang)}&v=${encodeURIComponent(videoId)}`,
+  ]
+  // Try manual captions first (no kind), then auto-generated (kind=asr)
+  for (const lang of langCodes) {
+    for (const base of bases) {
+      for (const kind of ['', '&kind=asr']) {
+        try {
+          const url = `${base(lang)}${kind}`
+          const rr = await fetch(url)
+          if (rr.ok) {
+            const xml = await rr.text()
+            if (xml && xml.includes('<transcript')){
+              const out: Array<{ start: number; dur: number; text: string }> = []
+              const re = /<text[^>]*start="([^"]+)"[^>]*dur="([^"]+)"[^>]*>([\s\S]*?)<\/text>/g
+              let m: RegExpExecArray | null
+              while ((m = re.exec(xml))){
+                const start = Math.floor(Number(m[1]) * 1000)
+                const dur = Math.floor(Number(m[2]) * 1000)
+                const raw = m[3].replace(/\n/g, ' ').replace(/\r/g, ' ')
+                const text = decodeHtmlEntities(raw)
+                if (Number.isFinite(start) && Number.isFinite(dur) && text.trim()){
+                  out.push({ start, dur, text: text.trim() })
+                }
+              }
+              if (out.length) return out
+            }
+          }
+        } catch {}
+      }
+    }
+  }
+
   return []
 }
 
