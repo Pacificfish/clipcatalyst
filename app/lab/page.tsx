@@ -27,6 +27,7 @@ export default function LabPage() {
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [autoAiBg, setAutoAiBg] = useState(true);
+  const [projectsRefresh, setProjectsRefresh] = useState(0);
   const [musicUrl, setMusicUrl] = useState('');
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
@@ -132,6 +133,8 @@ export default function LabPage() {
       if (!res.ok) throw new Error(data.error || 'Generation failed');
       setResult(data);
       if (data?.bg_image_url) { setBgUrlManual(data.bg_image_url) }
+      // Trigger Projects list refresh so the new project appears immediately
+      setProjectsRefresh((v) => v + 1);
 
       try {
         const res2 = await fetch('/api/usage', {
@@ -352,7 +355,7 @@ const res = await fetch('/api/worker/proxy', {
           )}
 
           {/* Previous projects grid */}
-          <ProjectsGrid token={session?.access_token} />
+          <ProjectsGrid token={session?.access_token} refresh={projectsRefresh} />
         </div>
       </main>
     </>
@@ -424,7 +427,7 @@ function Veo3Form({ token }: { token?: string }) {
   )
 }
 
-function ProjectsGrid({ token }: { token?: string }) {
+function ProjectsGrid({ token, refresh }: { token?: string, refresh?: number }) {
   const [items, setItems] = useState<Array<{ id: string; title: string; mp3_url: string; csv_url: string; thumb_url: string | null; updated_at: string | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -448,7 +451,7 @@ function ProjectsGrid({ token }: { token?: string }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, refresh]);
 
   if (!token) return null;
 
