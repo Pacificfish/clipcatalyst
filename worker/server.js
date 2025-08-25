@@ -161,7 +161,49 @@ app.post('/render', async (req, res) => {
     function parseCsvLine(line){
       const parts=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ;continue}if(ch===','&&!inQ){parts.push(cur);cur='';continue}cur+=ch}parts.push(cur);return parts}
     function hmsToMs(t){const seg=String(t).trim();const pts=seg.split(':').map(Number);if(pts.some(x=>Number.isNaN(x)))return null;let h=0,m=0,s=0;if(pts.length===2){[m,s]=pts}else if(pts.length===3){[h,m,s]=pts}else return null;return((h*60+m)*60+s)*1000}
-    function csvToEvents(text){const lines=String(text).trim().split(/\r?\n/).filter(Boolean);if(lines.length===0) return [];const header=lines[0].toLowerCase();const body=(header.includes('time')||header.includes('start')||header.includes('text'))?lines.slice(1):lines;const rows=body.map(parseCsvLine).filter(r=>r.length>=2);const ev=[];if(header.includes('start')&&header.includes('end')){for(const r of rows){const st=Number(r[0])||0;const en=Number(r[1])||Math.max(500,st+1500);const tx=(r.slice(2).join(',')||'').trim();ev.push({start:st,end:en,text:tx})}return ev}const times=rows.map(r=>hmsToMs(r[0]));for(let i=0;i<rows.length;i++){const t=times[i];if(t==null) continue;const next=times[i+1];const end=next!=null?Math.max(t+500,next):t+1500;const tx=(rows[i].slice(1).join(',')||'').trim();ev.push({start:t,end,text:tx})}return ev}
+    function csvToEvents(text){
+      const raw = String(text)
+      const lines = raw.trim().split(/\r?\n/).filter(Boolean)
+      if (lines.length===0) return []
+      const header = lines[0].toLowerCase()
+      const body = (header.includes('time')||header.includes('start')||header.includes('text')) ? lines.slice(1) : lines
+      const ev = []
+      const SHIFT_MS = -80 // show slightly earlier to match perceived audio
+      if (header.includes('start') && header.includes('end')){
+        // Fast path: parse start,end,text per line; robust to quotes/commas
+        const rows = body
+        for (const line of rows){
+          const m = line.match(/^\s*(\d+)\s*[,\t]\s*(\d+)\s*[,\t]\s*(.*)\s*$/)
+          if (!m) continue
+          let st = Number(m[1]||0)
+          let en = Number(m[2]||0)
+          let tx = m[3]||''
+          if (tx.startsWith('"') && tx.endsWith('"')) tx = tx.slice(1,-1).replace(/""/g,'"')
+          st = Math.max(0, st + SHIFT_MS)
+          if (!(en>st)) en = st + 1
+          ev.push({ start: st, end: en, text: tx.trim() })
+        }
+        // Snap to remove gaps and ensure monotonicity
+        ev.sort((a,b)=>a.start-b.start)
+        for (let i=1;i<ev.length;i++){
+          if (ev[i].start > ev[i-1].end) ev[i].start = ev[i-1].end
+          if (ev[i].end <= ev[i].start) ev[i].end = ev[i].start + 1
+        }
+        return ev
+      }
+      // Fallback: HH:MM text lines
+      const rows = body.map(parseCsvLine).filter(r=>r.length>=2)
+      const times = rows.map(r=>hmsToMs(r[0]))
+      for (let i=0;i<rows.length;i++){
+        const t = times[i]
+        if (t==null) continue
+        const next = times[i+1]
+        const end = next!=null?Math.max(t+500,next):t+1500
+        const tx = (rows[i].slice(1).join(',')||'').trim()
+        ev.push({ start:t, end, text:tx })
+      }
+      return ev
+    }
     function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
     // Build "one word at a time" ASS where each word pops in/out
     function buildWordAss(events){
