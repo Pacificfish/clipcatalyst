@@ -40,7 +40,7 @@ export default function LabPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
   // Unified mode/preset selector
-  const [view, setView] = useState<'Paste' | 'URL' | 'Autoclipper'>('Paste');
+  const [view, setView] = useState<'Paste' | 'Autoclipper'>('Paste');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -289,13 +289,12 @@ const res = await fetch('/api/worker/proxy', {
                 className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm"
                 value={view}
                 onChange={(e) => {
-                  const v = e.target.value as 'Paste' | 'URL' | 'Autoclipper'
+                  const v = e.target.value as 'Paste' | 'Autoclipper'
                   setView(v)
-                  if (v === 'Paste' || v === 'URL') setMode(v)
+                  if (v === 'Paste') setMode(v)
                 }}
               >
                 <option value="Paste">Paste</option>
-                <option value="URL">URL</option>
                 <option value="Autoclipper">Autoclipper (YouTube)</option>
               </select>
             </div>
@@ -311,13 +310,10 @@ const res = await fetch('/api/worker/proxy', {
             </div>
           )}
 
-          {/* Source input (shown for Paste/URL) */}
+          {/* Source input (shown for Paste) */}
           <div>
             {view === 'Paste' && (
               <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            )}
-            {view === 'URL' && (
-              <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e) => setSource(e.target.value)} />
             )}
           </div>
 
@@ -341,24 +337,30 @@ const res = await fetch('/api/worker/proxy', {
 
           {/* Style preset, b‑roll and music (hide most when Autoclipper) */}
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
-              TikTok style preset
-            </label>
+            {view !== 'Autoclipper' && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
+                TikTok style preset
+              </label>
+            )}
             {view !== 'Autoclipper' && (
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
                 Auto AI background image
               </label>
             )}
-            <label className="flex flex-col gap-1 sm:col-span-1">
-              <span className="text-xs text-white/60">Background music URL (optional)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 sm:col-span-1">
-              <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
-            </label>
+            {view !== 'Autoclipper' && (
+              <label className="flex flex-col gap-1 sm:col-span-1">
+                <span className="text-xs text-white/60">Background music URL (optional)</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
+              </label>
+            )}
+            {view !== 'Autoclipper' && (
+              <label className="flex flex-col gap-1 sm:col-span-1">
+                <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
+              </label>
+            )}
             {view !== 'Autoclipper' && (
               <label className="flex flex-col gap-1 sm:col-span-3">
                 <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
