@@ -168,7 +168,7 @@ app.post('/render', async (req, res) => {
       const header = lines[0].toLowerCase()
       const body = (header.includes('time')||header.includes('start')||header.includes('text')) ? lines.slice(1) : lines
       const ev = []
-      const SHIFT_MS = -80 // show slightly earlier to match perceived audio
+      const SHIFT_MS = 0
       if (header.includes('start') && header.includes('end')){
         // Fast path: parse start,end,text per line; robust to quotes/commas
         const rows = body

@@ -191,71 +191,59 @@ Return ONLY JSON per the schema.
     }
     let csv = lines.join('\n')
 
-    // Try word-accurate timings via Whisper (word granularity)
-    try {
-      const fd = new FormData()
-      // Node runtime provides File, Blob via undici
-      const file = new File([audioBuf], 'voiceover.mp3', { type: 'audio/mpeg' })
-      fd.set('file', file)
-      fd.set('model', 'whisper-1')
-      fd.set('response_format', 'verbose_json')
-      fd.append('timestamp_granularities[]', 'word')
-      const tr = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-        body: fd,
-      })
-      if (tr.ok) {
-        const tj: any = await tr.json().catch(() => null)
-        type W = { s: number, e: number, t: string }
-        const wordsOut: W[] = []
-        const pushWord = (sSec: any, eSec: any, raw: any) => {
-          const s = Math.max(0, Math.round(Number(sSec || 0) * 1000))
-          let e = Math.round(Number(eSec || 0) * 1000)
-          if (!Number.isFinite(e) || e <= s) e = s + 1
-          const text = String(raw || '').trim()
-          if (text) wordsOut.push({ s, e, t: text })
-        }
-        if (Array.isArray(tj?.words) && tj.words.length) {
-          for (const w of tj.words) pushWord(w?.start, w?.end, w?.word ?? w?.text)
-        } else if (Array.isArray(tj?.segments) && tj.segments.length) {
-          // Prefer segment.words if present; else evenly split the segment by whitespace tokens
-          for (const seg of tj.segments) {
-            const segStart = Number(seg?.start || 0)
-            const segEnd = Number(seg?.end || 0)
-            if (Array.isArray(seg?.words) && tj.segments) {
+    // Word-accurate timings (Whisper) disabled to restore previous caption behavior.
+    // If you want to re-enable, set process.env.ENABLE_WHISPER_WORDS === '1'.
+    if (process.env.ENABLE_WHISPER_WORDS === '1') {
+      try {
+        const fd = new FormData()
+        const file = new File([audioBuf], 'voiceover.mp3', { type: 'audio/mpeg' })
+        fd.set('file', file)
+        fd.set('model', 'whisper-1')
+        fd.set('response_format', 'verbose_json')
+        fd.append('timestamp_granularities[]', 'word')
+        const tr = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+          body: fd,
+        })
+        if (tr.ok) {
+          const tj: any = await tr.json().catch(() => null)
+          type W = { s: number, e: number, t: string }
+          const wordsOut: W[] = []
+          const pushWord = (sSec: any, eSec: any, raw: any) => {
+            const s = Math.max(0, Math.round(Number(sSec || 0) * 1000))
+            let e = Math.round(Number(eSec || 0) * 1000)
+            if (!Number.isFinite(e) || e <= s) e = s + 1
+            const text = String(raw || '').trim()
+            if (text) wordsOut.push({ s, e, t: text })
+          }
+          if (Array.isArray(tj?.words) && tj.words.length) {
+            for (const w of tj.words) pushWord(w?.start, w?.end, w?.word ?? w?.text)
+          } else if (Array.isArray(tj?.segments) && tj.segments.length) {
+            for (const seg of tj.segments) {
+              const segStart = Number(seg?.start || 0)
+              const segEnd = Number(seg?.end || 0)
               if (Array.isArray(seg?.words) && seg.words.length) {
                 for (const w of seg.words) pushWord(w?.start ?? segStart, w?.end ?? segEnd, w?.word ?? w?.text)
               }
-            } else {
-              const t = String(seg?.text || '').trim()
-              const toks = t.split(/\s+/).filter(Boolean)
-              const dur = Math.max(0, segEnd - segStart)
-              const per = toks.length ? dur / Math.max(1, toks.length) : 0
-              for (let i=0;i<toks.length;i++) {
-                const s = segStart + i*per
-                const e = i === toks.length-1 ? segEnd : s + per
-                pushWord(s, e, toks[i])
-              }
             }
           }
-        }
-        // Remove any delays between words: snap each start to previous end (monotonic, no gaps)
-        wordsOut.sort((a,b)=>a.s-b.s)
-        for (let i=1;i<wordsOut.length;i++){
-          if (wordsOut[i].s > wordsOut[i-1].e) wordsOut[i].s = wordsOut[i-1].e
-          if (wordsOut[i].e <= wordsOut[i].s) wordsOut[i].e = wordsOut[i].s + 1
-        }
-        if (wordsOut.length){
-          const wlines = ['start,end,text']
-          for (const w of wordsOut){
-            const safe = w.t.replace(/\\\"/g,'""')
-            wlines.push(`${w.s},${w.e},\\"${safe}\\"`)
+          wordsOut.sort((a,b)=>a.s-b.s)
+          for (let i=1;i<wordsOut.length;i++){
+            if (wordsOut[i].s > wordsOut[i-1].e) wordsOut[i].s = wordsOut[i-1].e
+            if (wordsOut[i].e <= wordsOut[i].s) wordsOut[i].e = wordsOut[i].s + 1
           }
-          csv = wlines.join('\n')
+          if (wordsOut.length){
+            const wlines = ['start,end,text']
+            for (const w of wordsOut){
+              const safe = w.t.replace(/\\\"/g,'""')
+              wlines.push(`${w.s},${w.e},\\"${safe}\\"`)
+            }
+            csv = wlines.join('\n')
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
 
     const safeId = crypto.createHash('sha256').update(email).digest('hex').slice(0, 12)
     const base = `${safeId}/${projectId}`
