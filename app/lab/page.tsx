@@ -281,10 +281,19 @@ const res = await fetch('/api/worker/proxy', {
         </header>
 
         <div className="card p-6 space-y-4">
-          {/* Mode selector */}
-          <div className="flex gap-2">
-            <button className={`btn ${mode === 'Paste' ? '!bg-white/15' : ''}`} onClick={() => setMode('Paste')}>Paste</button>
-            <button className={`btn ${mode === 'URL' ? '!bg-white/15' : ''}`} onClick={() => setMode('URL')}>URL</button>
+          {/* Mode selector + Preset dropdown */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2">
+              <button className={`btn ${mode === 'Paste' ? '!bg-white/15' : ''}`} onClick={() => setMode('Paste')}>Paste</button>
+              <button className={`btn ${mode === 'URL' ? '!bg-white/15' : ''}`} onClick={() => setMode('URL')}>URL</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/60">Preset</span>
+              <select className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm" value={preset} onChange={e=>setPreset(e.target.value as any)}>
+                <option value="None">None</option>
+                <option value="Autoclipper">Autoclipper (YouTube)</option>
+              </select>
+            </div>
           </div>
 
           {/* Title */}
@@ -353,25 +362,10 @@ const res = await fetch('/api/worker/proxy', {
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 
-          {/* Presets */}
-          <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold">Presets</div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-white/60">Select</span>
-                <select className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm" value={preset} onChange={e=>setPreset(e.target.value as any)}>
-                  <option value="None">None</option>
-                  <option value="Autoclipper">Autoclipper (YouTube)</option>
-                </select>
-              </div>
-            </div>
-
-            {preset === 'None' && (
-              <div className="text-xs text-white/60">Choose a preset to configure its options.</div>
-            )}
-
-            {preset === 'Autoclipper' && (
-              <div className="space-y-3 rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
+          {/* Preset configuration below; only show when a preset is chosen */}
+          {preset === 'Autoclipper' && (
+            <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
+              <div className="space-y-3">
                 <div className="text-sm font-semibold">Autoclipper (YouTube)</div>
                 <p className="text-xs text-white/60">Pick the best {autoNumClips}× ~{autoClipSec}s highlights from a long video. Paste a YouTube URL, we’ll fetch the transcript and suggest timestamps.</p>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -404,8 +398,8 @@ const res = await fetch('/api/worker/proxy', {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Veo3 (feature-gated) */}
           {process.env.NEXT_PUBLIC_ENABLE_VEO3 === '1' && (
