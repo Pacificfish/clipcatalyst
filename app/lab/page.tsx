@@ -27,6 +27,7 @@ export default function LabPage() {
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [autoBroll, setAutoBroll] = useState(true);
+  const [autoAiBg, setAutoAiBg] = useState(true);
   const [musicUrl, setMusicUrl] = useState('');
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
@@ -119,7 +120,7 @@ export default function LabPage() {
     setError(null);
     setResult(null);
     try {
-      const body: any = { mode, language, tone, topic, email, title: title.trim(), project_id: `lab-${Date.now()}` };
+      const body: any = { mode, language, tone, topic, email, title: title.trim(), project_id: `lab-${Date.now()}`, auto_ai_bg: autoAiBg };
       if (mode === 'Paste') body.source_text = source.trim();
       if (mode === 'URL') body.source_url = source.trim();
 
@@ -131,9 +132,10 @@ export default function LabPage() {
         },
         body: JSON.stringify(body),
       });
-      const data: GenerateResult = await res.json();
+      const data: GenerateResult & { bg_image_url?: string } = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
       setResult(data);
+      if (data?.bg_image_url) { setBgUrlManual(data.bg_image_url); setAutoBroll(false) }
 
       try {
         const res2 = await fetch('/api/usage', {
@@ -308,6 +310,10 @@ const res = await fetch('/api/worker/proxy', {
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
               Auto b‑roll
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
+              Auto AI background image
             </label>
             <label className="flex flex-col gap-1 sm:col-span-1">
               <span className="text-xs text-white/60">Background music URL (optional)</span>

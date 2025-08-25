@@ -21,6 +21,7 @@ type Payload = {
   topic?: string
   email?: string
   project_id?: string
+  auto_ai_bg?: boolean
 }
 
 type GenJSON = {
@@ -203,6 +204,38 @@ Return ONLY JSON per the schema.
     const mp3Pub = supabaseAdmin.storage.from('clips').getPublicUrl(mp3Path).data.publicUrl
     const csvPub = supabaseAdmin.storage.from('clips').getPublicUrl(csvPath).data.publicUrl
 
+    // Optionally generate an AI background image relevant to the prompt/keywords
+    let bgImagePub: string | null = null
+    const wantAutoBg = body.auto_ai_bg !== false
+    if (wantAutoBg && OPENAI_API_KEY) {
+      try {
+        const bgPrompt = [
+          `Vertical cinematic background, 9:16, cohesive with: ${title}`,
+          keywords.length ? `Themes: ${keywords.join(', ')}` : '',
+          'High-contrast, soft gradients, abstract or subtle scene, no text, no watermark.'
+        ].filter(Boolean).join('. ')
+        const imgRes = await fetch('https://api.openai.com/v1/images', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'gpt-image-1', prompt: bgPrompt, size: '1024x1792', response_format: 'b64_json' })
+        })
+        if (imgRes.ok){
+          const j = await imgRes.json().catch(()=>null) as any
+          const b64 = j?.data?.[0]?.b64_json
+          if (b64){
+            const bytes = Buffer.from(b64, 'base64')
+            const bgPath = `${base}/bg-${Date.now()}.png`
+            const upB = await supabaseAdmin.storage.from('clips').upload(bgPath, new Blob([bytes], { type: 'image/png' }), { upsert: true, contentType: 'image/png' })
+            if (!upB.error){
+              bgImagePub = supabaseAdmin.storage.from('clips').getPublicUrl(bgPath).data.publicUrl
+            }
+          }
+        } else {
+          try { console.warn('AI bg image gen failed:', await imgRes.text()) } catch {}
+        }
+      } catch {}
+    }
+
     let thumbPub: string | null = null
     try {
       const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -238,7 +271,7 @@ Return ONLY JSON per the schema.
         }, { onConflict: 'id' })
     } catch {}
 
-    return NextResponse.json({ mp3_url: mp3Pub, csv_url: csvPub, project_id: projectId, keywords }, { headers })
+    return NextResponse.json({ mp3_url: mp3Pub, csv_url: csvPub, project_id: projectId, keywords, bg_image_url: bgImagePub }, { headers })
   } catch (e: any) {
     return NextResponse.json({ error: 'Server error', details: String(e?.message || e) }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
   }
