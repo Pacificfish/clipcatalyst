@@ -212,9 +212,10 @@ Return ONLY JSON per the schema.
           const wlines = ['start,end,text']
           for (const w of words) {
             const s = Math.max(0, Math.round(Number(w?.start || 0) * 1000))
-            const e = Math.max(s + 40, Math.round(Number(w?.end || 0) * 1000))
-            const text = String(w?.word || w?.text || '').trim().replace(/\"/g, '""')
-            if (text) wlines.push(`${s},${e},\"${text}\"`)
+            let e = Math.round(Number(w?.end || 0) * 1000)
+            if (!Number.isFinite(e) || e <= s) e = s + 1
+            const text = String(w?.word || w?.text || '').trim().replace(/\\\"/g, '""')
+            if (text) wlines.push(`${s},${e},\\"${text}\\"`)
           }
           if (wlines.length > 1) csv = wlines.join('\n')
         }

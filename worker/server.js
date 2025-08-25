@@ -176,7 +176,8 @@ app.post('/render', async (req, res) => {
           // Exact word timing from CSV (start,end in ms)
           const st = msToAss(ev.start)
           const en = msToAss(ev.end)
-          const tag = `{\\an2\\bord8\\fad(24,60)\\fscx55\\fscy55\\t(0,80,\\fscx125\\fscy125)\\t(80,160,\\fscx100\\fscy100)}`
+          // No extra fade/animation so display matches exact audio window
+          const tag = `{\\an2\\bord8}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[0]}`)
           continue
         }
