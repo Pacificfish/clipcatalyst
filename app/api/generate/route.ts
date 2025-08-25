@@ -207,18 +207,37 @@ Return ONLY JSON per the schema.
       })
       if (tr.ok) {
         const tj: any = await tr.json().catch(() => null)
-        const words: any[] = Array.isArray(tj?.words) ? tj.words : []
-        if (words.length) {
-          const wlines = ['start,end,text']
-          for (const w of words) {
-            const s = Math.max(0, Math.round(Number(w?.start || 0) * 1000))
-            let e = Math.round(Number(w?.end || 0) * 1000)
-            if (!Number.isFinite(e) || e <= s) e = s + 1
-            const text = String(w?.word || w?.text || '').trim().replace(/\\\"/g, '""')
-            if (text) wlines.push(`${s},${e},\\"${text}\\"`)
-          }
-          if (wlines.length > 1) csv = wlines.join('\n')
+        const wlines = ['start,end,text']
+        const pushWord = (sSec: any, eSec: any, raw: any) => {
+          const s = Math.max(0, Math.round(Number(sSec || 0) * 1000))
+          let e = Math.round(Number(eSec || 0) * 1000)
+          if (!Number.isFinite(e) || e <= s) e = s + 1
+          const text = String(raw || '').trim().replace(/\\\"/g, '""')
+          if (text) wlines.push(`${s},${e},\\"${text}\\"`)
         }
+        if (Array.isArray(tj?.words) && tj.words.length) {
+          for (const w of tj.words) pushWord(w?.start, w?.end, w?.word ?? w?.text)
+        } else if (Array.isArray(tj?.segments) && tj.segments.length) {
+          // Prefer segment.words if present; else evenly split the segment by whitespace tokens
+          for (const seg of tj.segments) {
+            const segStart = Number(seg?.start || 0)
+            const segEnd = Number(seg?.end || 0)
+            if (Array.isArray(seg?.words) && seg.words.length) {
+              for (const w of seg.words) pushWord(w?.start ?? segStart, w?.end ?? segEnd, w?.word ?? w?.text)
+            } else {
+              const t = String(seg?.text || '').trim()
+              const toks = t.split(/\s+/).filter(Boolean)
+              const dur = Math.max(0, segEnd - segStart)
+              const per = toks.length ? dur / toks.length : 0
+              for (let i=0;i<toks.length;i++) {
+                const s = segStart + i*per
+                const e = i === toks.length-1 ? segEnd : s + per
+                pushWord(s, e, toks[i])
+              }
+            }
+          }
+        }
+        if (wlines.length > 1) csv = wlines.join('\n')
       }
     } catch {}
 
