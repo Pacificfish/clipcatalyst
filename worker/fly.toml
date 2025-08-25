@@ -8,6 +8,9 @@ primary_region = 'lax'
 
 [build]
 
+[env]
+  CAPTION_TIMING_SCALE = '0.2'
+
 [http_service]
   internal_port = 8080
   force_https = true

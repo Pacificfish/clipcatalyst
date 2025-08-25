@@ -28,6 +28,13 @@ export default function LabPage() {
   const [isRendering, setIsRendering] = useState(false);
   const [autoAiBg, setAutoAiBg] = useState(true);
   const [projectsRefresh, setProjectsRefresh] = useState(0);
+  // Presets: Autoclipper state
+  const [ytUrl, setYtUrl] = useState('');
+  const [autoNumClips, setAutoNumClips] = useState(3);
+  const [autoClipSec, setAutoClipSec] = useState(30);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoErr, setAutoErr] = useState<string | null>(null);
+  const [autoSegments, setAutoSegments] = useState<Array<{ start: number; end: number; text: string }>>([]);
   const [musicUrl, setMusicUrl] = useState('');
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
@@ -204,6 +211,30 @@ const res = await fetch('/api/worker/proxy', {
 
   const disabled = isLoading || !source.trim() || !title.trim();
 
+  async function runAutoclipper() {
+    if (!session?.access_token) return;
+    setAutoBusy(true);
+    setAutoErr(null);
+    setAutoSegments([]);
+    try {
+      const res = await fetch('/api/presets/autoclip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ youtube_url: ytUrl.trim(), max_clips: autoNumClips, target_seconds: autoClipSec }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Autoclip failed');
+      setAutoSegments(Array.isArray(data?.segments) ? data.segments : []);
+    } catch (e: any) {
+      setAutoErr(e?.message || 'Autoclip failed');
+    } finally {
+      setAutoBusy(false);
+    }
+  }
+
   return (
     <>
       <Nav />
@@ -320,6 +351,47 @@ const res = await fetch('/api/worker/proxy', {
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 
+          {/* Presets */}
+          <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
+            <div className="text-sm font-semibold">Presets</div>
+            <div className="grid gap-4">
+              {/* Autoclipper */}
+              <div className="space-y-3 rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
+                <div className="text-sm font-semibold">Autoclipper (YouTube)</div>
+                <p className="text-xs text-white/60">Pick the best {autoNumClips}× ~{autoClipSec}s highlights from a long video. Paste a YouTube URL, we’ll fetch the transcript and suggest timestamps.</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="flex flex-col gap-1 sm:col-span-2">
+                    <span className="text-xs text-white/60">YouTube URL</span>
+                    <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={ytUrl} onChange={e=>setYtUrl(e.target.value)} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-white/60">Clips</span>
+                    <input type="number" min={1} max={10} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoNumClips} onChange={e=>setAutoNumClips(parseInt(e.target.value || '3',10))} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs text-white/60">Seconds per clip</span>
+                    <input type="number" min={8} max={90} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoClipSec} onChange={e=>setAutoClipSec(parseInt(e.target.value || '30',10))} />
+                  </label>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <button onClick={runAutoclipper} disabled={autoBusy || !ytUrl.trim()} className={`btn-primary ${autoBusy || !ytUrl.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>{autoBusy ? 'Analyzing…' : 'Suggest Highlights'}</button>
+                  {autoErr && <span className="text-xs text-rose-300">{autoErr}</span>}
+                </div>
+                {autoSegments.length>0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-xs text-white/60">Suggested segments</div>
+                    <ul className="text-sm list-disc pl-5 space-y-1">
+                      {autoSegments.map((s,i)=> (
+                        <li key={i}><span className="font-mono">{msToHMS(s.start)} → {msToHMS(s.end)}</span> – {s.text?.slice(0,100)}</li>
+                      ))}
+                    </ul>
+                    <div className="text-xs text-white/50">Note: Rendering of these clips into MP4s can be wired next. For now, use the timestamps to guide manual clipping or let me know to auto-render via the worker.</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Veo3 (feature-gated) */}
           {process.env.NEXT_PUBLIC_ENABLE_VEO3 === '1' && (
             <div className="mt-8 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
@@ -360,6 +432,15 @@ const res = await fetch('/api/worker/proxy', {
       </main>
     </>
   );
+}
+
+function msToHMS(ms: number){
+  ms = Math.max(0, Math.floor(ms));
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  const pad = (n: number, w: number=2)=> String(n).padStart(w,'0');
+  return `${pad(h,1)}:${pad(m)}:${pad(s)}`
 }
 
 function Veo3Form({ token }: { token?: string }) {

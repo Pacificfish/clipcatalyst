@@ -107,7 +107,7 @@ app.post('/render', async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
-    const { mp3_url, csv_url, bg_urls = [], bg_url = '', preset = 'tiktok_v1', title } = req.body || {};
+    const { mp3_url, csv_url, word_csv_url = '', bg_urls = [], bg_url = '', preset = 'tiktok_v1', title } = req.body || {};
     const bgCandidates = []
     if (bg_url) bgCandidates.push(bg_url)
     if (Array.isArray(bg_urls)) bgCandidates.push(...bg_urls)
@@ -202,50 +202,137 @@ app.post('/render', async (req, res) => {
         const tx = (rows[i].slice(1).join(',')||'').trim()
         ev.push({ start:t, end, text:tx })
       }
+      // Snap to remove gaps across events
+      ev.sort((a,b)=>a.start-b.start)
+      for (let i=1;i<ev.length;i++){
+        if (ev[i].start > ev[i-1].end) ev[i].start = ev[i-1].end
+        if (ev[i].end <= ev[i].start) ev[i].end = ev[i].start + 1
+      }
       return ev
     }
     function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
-    // Build "one word at a time" ASS where each word pops in/out
-    function buildWordAss(events){
+    // Parse simple start,end,text CSV intended for per-word timings
+    function parseStartEndCsv(text){
+      const lines = String(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean)
+      const out=[]
+      for (const line of lines){
+        const m = line.match(/^\s*(\d+)\s*[,\t]\s*(\d+)\s*[,\t]\s*(.*)\s*$/)
+        if (!m) continue
+        const st = Number(m[1]||0)
+        const en = Number(m[2]||0)
+        let tx = m[3]||''
+        if (tx.startsWith('"') && tx.endsWith('"')) tx = tx.slice(1,-1).replace(/""/g,'"')
+        if (Number.isFinite(st) && Number.isFinite(en) && en>st) out.push({ start: st, end: en, text: tx.trim() })
+      }
+      return out
+    }
+
+    // Build ASS with per-word animations; exactWords optional for perfect sync
+    function buildWordAss(events, SPEED, opts = {}){
+      const { exactWords = null, shiftMs = 0 } = opts
       const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 46, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 8, 0, 2, 80, 80, 220, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
       const outLines = []
+
+      // If exact per-word timings provided, render those with pop animation
+      if (Array.isArray(exactWords) && exactWords.length){
+        let prevEnd = 0
+        for (let i=0;i<exactWords.length;i++){
+          const w = exactWords[i]
+          const rawS = Math.max(0, Math.floor(w.start + shiftMs))
+          const rawE = Math.max(0, Math.floor(w.end + shiftMs))
+          // Enforce increasing, non-overlapping times
+          const s = Math.max(prevEnd, rawS)
+          let e = Math.max(s+1, rawE)
+          // Prevent overlap with next word if its (shifted) start is earlier
+          const next = exactWords[i+1]
+          if (next){
+            const ns = Math.max(prevEnd, Math.floor(next.start + shiftMs))
+            if (ns > s) e = Math.min(e, ns)
+          }
+          const dur = Math.max(1, e - s)
+          const st = msToAss(s)
+          const en = msToAss(e)
+          const t1 = Math.max(1, Math.floor(dur * 0.35))
+          const t2 = Math.max(t1+1, Math.floor(dur * 0.7))
+          const tag = `{\\an2\\bord8\\shad0\\fscx60\\fscy60\\t(0,${t1},\\fscx128\\fscy128)\\t(${t1},${t2},\\fscx100\\fscy100)}`
+          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${w.text}`)
+          prevEnd = e
+        }
+        return header + outLines.join('\n') + '\n'
+      }
+
+      // Fallback: derive per-word times from event windows; one word visible at a time with pop
       for (const ev of events){
+        let cursor = Math.max(0, ev.start)
         const text = String(ev.text||'').replace(/\\s+/g,' ').trim()
         if (!text) continue
         const words = text.split(' ').filter(Boolean)
         const hasExact = Number.isFinite(ev.start) && Number.isFinite(ev.end) && ev.end > ev.start
         if (words.length === 1 && hasExact){
-          // Exact word timing from CSV (start,end in ms)
-          const st = msToAss(ev.start)
-          const en = msToAss(ev.end)
-          // No extra fade/animation so display matches exact audio window
-          const tag = `{\\an2\\bord8}`
-          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[0]}`)
+          // Single word: fill the window scaled by SPEED
+          let s = ev.start + shiftMs
+          s = Math.max(0, Math.floor(s))
+          const baseDur = Math.max(20, ev.end - ev.start)
+          let dur = Math.max(20, Math.floor(baseDur * SPEED))
+          if (s + dur > ev.end) dur = Math.max(20, ev.end - s)
+          const e = s + dur
+          const st = msToAss(s)
+          const en = msToAss(e)
+          const t1 = Math.max(1, Math.floor(dur * 0.35))
+          const t2 = Math.max(t1+1, Math.floor(dur * 0.7))
+          const tag = `{\\an2\\bord8\\shad0\\fscx60\\fscy60\\t(0,${t1},\\fscx128\\fscy128)\\t(${t1},${t2},\\fscx100\\fscy100)}`
+          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${text}`)
           continue
         }
-        // Fallback: distribute words across the event interval (faster cadence)
-        const total = Math.max(250, ev.end - ev.start)
-        const per = Math.max(60, Math.floor(total / Math.max(1, words.length)))
+        const total = Math.max(1, ev.end - ev.start)
         for (let i=0;i<words.length;i++){
-          const ws = ev.start + i*per
-          const we = (i===words.length-1) ? ev.end : Math.min(ev.end, ws + per)
+          let ws = Math.max(cursor, ev.start)
+          ws = Math.max(0, Math.floor(ws + (i===0?shiftMs:0)))
+          if (ws >= ev.end) break
+          const remaining = Math.max(1, ev.end - ws)
+          const remainingWords = words.length - i
+          const base = Math.floor(remaining / remainingWords)
+          let dur = Math.max(20, Math.floor(base * SPEED))
+          const minLeft = (remainingWords-1) * 20
+          if (dur > remaining - minLeft) dur = Math.max(20, remaining - minLeft)
+          if (i === words.length - 1) dur = remaining
+          if (!(dur > 0)) dur = 1
           const st = msToAss(ws)
-          const wordDur = Math.max(50, Math.min(we - ws, Math.floor(per * 0.6)))
-          const en = msToAss(ws + wordDur)
-          // Minimal styling; no fades or long transforms to avoid perceived delay
-          const tag = `{\\an2\\bord8}`
+          const en = msToAss(ws + dur)
+          const t1 = Math.max(1, Math.floor(dur * 0.35))
+          const t2 = Math.max(t1+1, Math.floor(dur * 0.7))
+          const tag = `{\\an2\\bord8\\shad0\\fscx60\\fscy60\\t(0,${t1},\\fscx128\\fscy128)\\t(${t1},${t2},\\fscx100\\fscy100)}`
           outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
+          cursor = ws + dur
         }
       }
       return header + outLines.join('\n') + '\n'
     }
     const csvText = fs.readFileSync(csvPath,'utf8')
     const eventsArr = csvToEvents(csvText)
+
+    // Optional exact per-word CSV
+    let exactWords = null
+    if (word_csv_url){
+      try {
+        const wr = await fetch(word_csv_url)
+        if (wr.ok){
+          const wtext = await wr.text()
+          const parsed = parseStartEndCsv(wtext)
+          if (parsed && parsed.length) exactWords = parsed
+        }
+      } catch {}
+    }
+
     const lastEndMs = eventsArr.length ? Math.max(...eventsArr.map(e=>e.end)) : 0
     const derivedSeconds = Math.ceil((lastEndMs||0)/1000)
     const finalSeconds = Math.max(outSeconds, derivedSeconds)
+    const timingScaleRaw = Number((req.body && req.body.timing_scale) || process.env.CAPTION_TIMING_SCALE || 1)
+    const timingScale = Number.isFinite(timingScaleRaw) ? Math.max(0.1, Math.min(3, timingScaleRaw)) : 1
+    const shiftMsRaw = Number((req.body && req.body.shift_ms) || process.env.CAPTION_SHIFT_MS || 0)
+    const shiftMs = Number.isFinite(shiftMsRaw) ? Math.max(-1000, Math.min(1000, Math.floor(shiftMsRaw))) : 0
     const assPath = path.join(tmp,'subs.ass')
-    fs.writeFileSync(assPath, buildWordAss(eventsArr),'utf8')
+    fs.writeFileSync(assPath, buildWordAss(eventsArr, timingScale, { exactWords, shiftMs }),'utf8')
 
     const cmd = ffmpegLib();
     if (bgPath){
