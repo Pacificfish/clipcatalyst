@@ -39,8 +39,8 @@ export default function LabPage() {
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
-  // Preset selector
-  const [preset, setPreset] = useState<'None' | 'Autoclipper'>('None');
+  // Unified mode/preset selector
+  const [view, setView] = useState<'Paste' | 'URL' | 'Autoclipper'>('Paste');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -211,7 +211,7 @@ const res = await fetch('/api/worker/proxy', {
     }
   }
 
-  const disabled = isLoading || !source.trim() || !title.trim();
+  const disabled = isLoading || !title.trim() || (view !== 'Autoclipper' && !source.trim());
 
   async function runAutoclipper() {
     if (!session?.access_token) return;
@@ -281,16 +281,21 @@ const res = await fetch('/api/worker/proxy', {
         </header>
 
         <div className="card p-6 space-y-4">
-          {/* Mode selector + Preset dropdown */}
+          {/* Mode selector dropdown (left) */}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <button className={`btn ${mode === 'Paste' ? '!bg-white/15' : ''}`} onClick={() => setMode('Paste')}>Paste</button>
-              <button className={`btn ${mode === 'URL' ? '!bg-white/15' : ''}`} onClick={() => setMode('URL')}>URL</button>
-            </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-white/60">Preset</span>
-              <select className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm" value={preset} onChange={e=>setPreset(e.target.value as any)}>
-                <option value="None">None</option>
+              <span className="text-xs text-white/60">Mode</span>
+              <select
+                className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm"
+                value={view}
+                onChange={(e) => {
+                  const v = e.target.value as 'Paste' | 'URL' | 'Autoclipper'
+                  setView(v)
+                  if (v === 'Paste' || v === 'URL') setMode(v)
+                }}
+              >
+                <option value="Paste">Paste</option>
+                <option value="URL">URL</option>
                 <option value="Autoclipper">Autoclipper (YouTube)</option>
               </select>
             </div>
@@ -304,11 +309,12 @@ const res = await fetch('/api/worker/proxy', {
             </label>
           </div>
 
-          {/* Source input */}
+          {/* Source input (shown for Paste/URL) */}
           <div>
-            {mode === 'Paste' ? (
+            {view === 'Paste' && (
               <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            ) : (
+            )}
+            {view === 'URL' && (
               <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e) => setSource(e.target.value)} />
             )}
           </div>
@@ -362,8 +368,8 @@ const res = await fetch('/api/worker/proxy', {
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 
-          {/* Preset configuration below; only show when a preset is chosen */}
-          {preset === 'Autoclipper' && (
+          {/* Preset configuration below; only show when Autoclipper is chosen */}
+          {view === 'Autoclipper' && (
             <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
               <div className="space-y-3">
                 <div className="text-sm font-semibold">Autoclipper (YouTube)</div>
