@@ -341,10 +341,12 @@ const res = await fetch('/api/worker/proxy', {
               <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
               TikTok style preset
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
-              Auto AI background image
-            </label>
+            {view !== 'Autoclipper' && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
+                Auto AI background image
+              </label>
+            )}
             <label className="flex flex-col gap-1 sm:col-span-1">
               <span className="text-xs text-white/60">Background music URL (optional)</span>
               <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
@@ -353,10 +355,12 @@ const res = await fetch('/api/worker/proxy', {
               <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
               <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
             </label>
-            <label className="flex flex-col gap-1 sm:col-span-3">
-              <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
-            </label>
+            {view !== 'Autoclipper' && (
+              <label className="flex flex-col gap-1 sm:col-span-3">
+                <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
+                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
+              </label>
+            )}
           </div>
 
           {/* Generate */}
