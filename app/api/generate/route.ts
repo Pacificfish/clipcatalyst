@@ -253,25 +253,28 @@ Return ONLY JSON per the schema.
       if (upErr) return NextResponse.json({ error: 'Usage update failed', details: upErr.message }, { status: 500, headers })
     }
 
-    try {
-      await supabaseAdmin
-        .from('projects')
-        .upsert({
-          id: projectId,
-          user_id: user.id,
-          title,
-          mode,
-          source_text: mode === 'Paste' ? plain : null,
-          source_url: mode === 'URL' ? source_url : null,
-          mp3_url: mp3Pub,
-          csv_url: csvPub,
-          thumb_url: thumbPub,
-          created_at: new Date().toISOString(),
-          keywords,
-        }, { onConflict: 'id' })
-    } catch {}
+    // Ensure the project is saved/updated so it appears in the grid immediately
+    const nowIso = new Date().toISOString()
+    const up = await supabaseAdmin
+      .from('projects')
+      .upsert({
+        id: projectId,
+        user_id: user.id,
+        title,
+        mode,
+        source_text: mode === 'Paste' ? plain : null,
+        source_url: mode === 'URL' ? source_url : null,
+        mp3_url: mp3Pub,
+        csv_url: csvPub,
+        thumb_url: thumbPub,
+        created_at: nowIso,
+        updated_at: nowIso,
+        keywords,
+      }, { onConflict: 'id' })
 
-    return NextResponse.json({ mp3_url: mp3Pub, csv_url: csvPub, project_id: projectId, keywords, bg_image_url: bgImagePub }, { headers })
+    const project_saved = !up.error
+
+    return NextResponse.json({ mp3_url: mp3Pub, csv_url: csvPub, project_id: projectId, keywords, bg_image_url: bgImagePub, project_saved, project_error: up.error?.message || null }, { headers })
   } catch (e: any) {
     return NextResponse.json({ error: 'Server error', details: String(e?.message || e) }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } })
   }
