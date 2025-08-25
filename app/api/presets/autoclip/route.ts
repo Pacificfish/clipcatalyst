@@ -36,6 +36,111 @@ function decodeHtmlEntities(s: string): string {
 }
 
 async function fetchTranscript(videoId: string, preferredLang?: string): Promise<Array<{ start: number; dur: number; text: string }>> {
+  // Helper: fetch with UA and timeout
+  const safeGet = async (url: string) => {
+    const controller = new AbortController()
+    const to = setTimeout(()=>controller.abort(), 8000)
+    try {
+      return await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ClipCatalyst/1.0; +https://example.com)' },
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(to)
+    }
+  }
+
+  // 0) Try listing available tracks and fetching directly from the listed entries
+  try {
+    const listUrls = [
+      `https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`,
+      `https://video.google.com/timedtext?type=list&v=${encodeURIComponent(videoId)}`,
+    ]
+    const tracks: { lang_code: string, name?: string, kind?: string }[] = []
+    for (const u of listUrls){
+      try {
+        const rs = await safeGet(u)
+        if (rs.ok){
+          const xml = await rs.text()
+          // Extract <track .../> elements
+          const re = /<track\b([^>]+?)\/>/g
+          let m: RegExpExecArray | null
+          while ((m = re.exec(xml))){
+            const attrs = m[1]
+            const get = (k: string) => {
+              const mm = attrs.match(new RegExp(k+"=\"([^\"]*)\""))
+              return mm ? mm[1] : ''
+            }
+            const lang_code = get('lang_code') || get('lang') || ''
+            const name = get('name') || ''
+            const kind = get('kind') || ''
+            if (lang_code){ tracks.push({ lang_code, name: name || undefined, kind: kind || undefined }) }
+          }
+        }
+      } catch {}
+    }
+    if (tracks.length){
+      // Sort: preferredLang first, then English, then others; manual before asr
+      const pref = (t: any) => (preferredLang && t.lang_code.toLowerCase().startsWith(preferredLang.toLowerCase())) ? 0 : (t.lang_code.toLowerCase().startsWith('en') ? 1 : 2)
+      tracks.sort((a,b)=>{
+        const pa = pref(a), pb = pref(b)
+        if (pa!==pb) return pa-pb
+        const ka = a.kind === 'asr' ? 1 : 0
+        const kb = b.kind === 'asr' ? 1 : 0
+        return ka - kb
+      })
+      for (const t of tracks){
+        for (const base of [
+          (fmt: string, kind: string) => `https://www.youtube.com/api/timedtext?lang=${encodeURIComponent(t.lang_code)}&v=${encodeURIComponent(videoId)}${kind}${fmt}${t.name?`&name=${encodeURIComponent(t.name)}`:''}`,
+          (fmt: string, kind: string) => `https://video.google.com/timedtext?lang=${encodeURIComponent(t.lang_code)}&v=${encodeURIComponent(videoId)}${kind}${fmt}${t.name?`&name=${encodeURIComponent(t.name)}`:''}`,
+        ]){
+          for (const kind of [t.kind==='asr'?'&kind=asr':'', '&kind=asr', '']){
+            // JSON3
+            try {
+              const rj = await safeGet(base('&fmt=json3', kind))
+              if (rj.ok){
+                const jj: any = await rj.json().catch(()=>null)
+                const parsed = parseJson3(jj)
+                if (parsed.length) return parsed
+              }
+            } catch {}
+            // VTT
+            try {
+              const rv = await safeGet(base('&fmt=vtt', kind))
+              if (rv.ok){
+                const vtt = await rv.text()
+                const parsed = parseVtt(vtt)
+                if (parsed.length) return parsed
+              }
+            } catch {}
+            // XML
+            try {
+              const rr = await safeGet(base('', kind))
+              if (rr.ok){
+                const xml = await rr.text()
+                if (xml && xml.includes('<transcript')){
+                  const out: Array<{ start: number; dur: number; text: string }> = []
+                  const reT = /<text[^>]*start=\"([^\"]+)\"[^>]*dur=\"([^\"]+)\"[^>]*>([\s\S]*?)<\/text>/g
+                  let mm: RegExpExecArray | null
+                  while ((mm = reT.exec(xml))){
+                    const start = Math.floor(Number(mm[1]) * 1000)
+                    const dur = Math.floor(Number(mm[2]) * 1000)
+                    const raw = mm[3].replace(/\n/g, ' ').replace(/\r/g, ' ')
+                    const text = decodeHtmlEntities(raw)
+                    if (Number.isFinite(start) && Number.isFinite(dur) && text.trim()){
+                      out.push({ start, dur, text: text.trim() })
+                    }
+                  }
+                  if (out.length) return out
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+  } catch {}
+
   // 1) Try the unofficial transcript endpoint first (JSON)
   try {
     for (const url of [
@@ -118,7 +223,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
         // JSON3
         try {
           const url = base('&fmt=json3', kind)
-          const rj = await fetch(url)
+          const rj = await safeGet(url)
           if (rj.ok){
             const jj: any = await rj.json().catch(()=>null)
             const parsed = parseJson3(jj)
@@ -128,7 +233,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
         // VTT
         try {
           const url = base('&fmt=vtt', kind)
-          const rv = await fetch(url)
+          const rv = await safeGet(url)
           if (rv.ok){
             const vtt = await rv.text()
             const parsed = parseVtt(vtt)
@@ -138,7 +243,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
         // XML
         try {
           const url = base('', kind)
-          const rr = await fetch(url)
+          const rr = await safeGet(url)
           if (rr.ok){
             const xml = await rr.text()
             if (xml && xml.includes('<transcript')){
