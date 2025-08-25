@@ -26,15 +26,11 @@ export default function LabPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [isRendering, setIsRendering] = useState(false);
-  const [autoBroll, setAutoBroll] = useState(true);
   const [autoAiBg, setAutoAiBg] = useState(true);
   const [musicUrl, setMusicUrl] = useState('');
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
-  const [aiPrompt, setAiPrompt] = useState('Aesthetic abstract neon waves background, cinematic, soft motion');
-  const [aiBusy, setAiBusy] = useState(false);
-  const [mirrorUrl, setMirrorUrl] = useState('');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -135,7 +131,7 @@ export default function LabPage() {
       const data: GenerateResult & { bg_image_url?: string } = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
       setResult(data);
-      if (data?.bg_image_url) { setBgUrlManual(data.bg_image_url); setAutoBroll(false) }
+      if (data?.bg_image_url) { setBgUrlManual(data.bg_image_url) }
 
       try {
         const res2 = await fetch('/api/usage', {
@@ -168,23 +164,10 @@ export default function LabPage() {
     try {
       setIsRendering(true);
 
-      let bg_urls: string[] | undefined;
-      if (autoBroll) {
-        try {
-          const kw = (result.keywords && result.keywords.length ? result.keywords : title.split(/\s+/).slice(0,6)).slice(0,8);
-          const r = await fetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, transcript: (mode === 'Paste' ? source : topic), keywords: kw, type: 'video', orientation: 'portrait', max: 8 }) });
-          if (r.ok) {
-            const data = await r.json();
-            const vids: string[] = Array.isArray(data?.videos) ? data.videos.map((v: any) => v?.url).filter(Boolean) : [];
-            bg_urls = vids.slice(0, 4); // use up to 4 clips
-          }
-        } catch {}
-      }
-
 const res = await fetch('/api/worker/proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mp3_url: result.mp3_url, csv_url: result.csv_url, ...(bgUrlManual.trim() ? { bg_url: bgUrlManual.trim() } : (bg_urls && bg_urls.length ? { bg_urls } : {})), ...(musicUrl.trim() ? { music_url: musicUrl.trim() } : {}), preset: useTikTokPreset ? 'tiktok_v1' : undefined, title, ...(logoUrl.trim() ? { logo_url: logoUrl.trim() } : {}) }),
+        body: JSON.stringify({ mp3_url: result.mp3_url, csv_url: result.csv_url, ...(bgUrlManual.trim() ? { bg_url: bgUrlManual.trim() } : {}), ...(musicUrl.trim() ? { music_url: musicUrl.trim() } : {}), preset: useTikTokPreset ? 'tiktok_v1' : undefined, title, ...(logoUrl.trim() ? { logo_url: logoUrl.trim() } : {}) }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
@@ -308,10 +291,6 @@ const res = await fetch('/api/worker/proxy', {
               TikTok style preset
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
-              Auto b‑roll
-            </label>
-            <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
               Auto AI background image
             </label>
@@ -327,69 +306,6 @@ const res = await fetch('/api/worker/proxy', {
               <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
               <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
             </label>
-          </div>
-
-          {/* AI Backgrounds */}
-          <div className="mt-4 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-            <div className="text-sm font-semibold">AI Backgrounds</div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 sm:col-span-2">
-                <span className="text-xs text-white/60">Generate AI image (OpenAI)</span>
-                <textarea className="w-full h-20 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} />
-              </label>
-              <div className="flex items-end">
-                <button className={`btn ${aiBusy ? 'opacity-60 cursor-not-allowed' : ''}`} disabled={aiBusy} onClick={async ()=>{
-                  if (!session?.access_token) return;
-                  setAiBusy(true)
-                  try {
-                    const r = await fetch('/api/ai/image', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-                      body: JSON.stringify({ prompt: aiPrompt, aspect_ratio: '9:16', project_id: result?.project_id || `lab-${Date.now()}` })
-                    })
-                    const data = await r.json().catch(()=>({}))
-                    if (!r.ok) throw new Error(data?.error || 'AI image failed')
-                    if (data?.image_url){ setBgUrlManual(data.image_url); setAutoBroll(false) }
-                  } catch (e:any) {
-                    alert(e?.message || 'AI image failed')
-                  } finally { setAiBusy(false) }
-                }}>Generate Image</button>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 sm:col-span-2">
-                <span className="text-xs text-white/60">Mirror AI video URL to storage (Runway/Luma/Pika etc.)</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://provider.cdn/video.mp4" value={mirrorUrl} onChange={e=>setMirrorUrl(e.target.value)} />
-              </label>
-              <div className="flex items-end">
-                <button className="btn" onClick={async ()=>{
-                  if (!session?.access_token || !mirrorUrl.trim()) return;
-                  setAiBusy(true)
-                  try {
-                    const r = await fetch('/api/ai/mirror', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-                      body: JSON.stringify({ url: mirrorUrl.trim(), kind: 'video', project_id: result?.project_id || `lab-${Date.now()}` })
-                    })
-                    const data = await r.json().catch(()=>({}))
-                    if (!r.ok) throw new Error(data?.error || 'Mirror failed')
-                    if (data?.url){ setBgUrlManual(data.url); setAutoBroll(false) }
-                  } catch (e:any) { alert(e?.message || 'Mirror failed') } finally { setAiBusy(false) }
-                }}>Mirror Video</button>
-              </div>
-            </div>
-            {bgUrlManual && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="text-xs text-white/60">Selected background URL:</div>
-                <div className="truncate text-xs"><a className="underline" href={bgUrlManual} target="_blank">{bgUrlManual}</a></div>
-                <div className="sm:col-span-2">
-                  {bgUrlManual.match(/\.(png|jpg|jpeg|webp|svg)(\?|$)/i) ? (
-                    <img src={bgUrlManual} alt="background" className="w-full rounded-md ring-1 ring-white/10" />
-                  ) : (
-                    <video src={bgUrlManual} className="w-full rounded-md ring-1 ring-white/10" controls/>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Generate */}
@@ -565,22 +481,10 @@ function ProjectsGrid({ token }: { token?: string }) {
                   className="btn-primary"
                   onClick={async () => {
                     try {
-                      let bg_urls: string[] | undefined;
-                      try {
-                        const kw = String(p.title || '').split(/\s+/).slice(0,8).filter(Boolean);
-                        if (kw.length) {
-                          const r = await fetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: p.title, keywords: kw, type: 'video', orientation: 'portrait', max: 8 }) });
-                          if (r.ok) {
-                            const data = await r.json();
-                            bg_urls = (Array.isArray(data?.videos) ? data.videos.map((v: any) => v?.url).filter(Boolean) : []).slice(0,4);
-                          }
-                        }
-                      } catch {}
-
 const res = await fetch('/api/worker/proxy', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mp3_url: p.mp3_url, csv_url: p.csv_url, ...(bg_urls && bg_urls.length ? { bg_urls } : {}), preset: 'tiktok_v1', title: p.title || 'Clip' }),
+                        body: JSON.stringify({ mp3_url: p.mp3_url, csv_url: p.csv_url, preset: 'tiktok_v1', title: p.title || 'Clip' }),
                       });
                       if (!res.ok) {
                         const txt = await res.text().catch(() => '');
