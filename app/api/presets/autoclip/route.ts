@@ -321,19 +321,33 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders })
 }
 
+export async function HEAD() {
+  // Health/HEAD check without noise
+  return new Response(null, { status: 204, headers: corsHeaders })
+}
+
 export async function GET() {
-  // Make it explicit that only POST is supported
-  return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers: corsHeaders })
+  // Return a friendly message instead of 405 to avoid console noise from bots/prefetchers
+  return NextResponse.json({ ok: true, message: 'Use POST to suggest highlights. This endpoint is healthy.' }, { status: 200, headers: corsHeaders })
 }
 
 export async function POST(req: Request){
   try {
     const headers = corsHeaders
 
+    // Gracefully no-op if body is missing (e.g., speculative prefetch)
+    const ctype = String(req.headers.get('content-type') || '').toLowerCase()
+    let body: Payload | null = null
+    if (ctype.includes('application/json')){
+      try { body = await req.json() } catch { body = null }
+    }
+    if (!body || !body.youtube_url){
+      return new Response(null, { status: 204, headers })
+    }
+
     const authHeader = req.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
 
-    const body = (await req.json()) as Payload
     const videoId = parseYouTubeId(String(body.youtube_url || ''))
     if (!videoId) return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400, headers })
 
