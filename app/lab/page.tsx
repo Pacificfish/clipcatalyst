@@ -221,7 +221,8 @@ const res = await fetch('/api/worker/proxy', {
     setAutoSegments([]);
     try {
       const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
-      const apiBase = (process.env.NEXT_PUBLIC_API_ORIGIN || (process.env.NODE_ENV === 'production' ? 'https://www.clipcatalyst.net' : defaultOrigin)).replace(/\/$/, '')
+      const prodDefault = 'https://clipcatalyst-dnuhao2qw-clip-catalyst.vercel.app'
+      const apiBase = (process.env.NEXT_PUBLIC_API_ORIGIN || (process.env.NODE_ENV === 'production' ? prodDefault : defaultOrigin)).replace(/\/$/, '')
       const endpoint = `${apiBase}/api/presets/autoclip?ts=${Date.now()}`
       const res = await fetch(endpoint, {
         method: 'POST',

@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.clipcatalyst.net').replace(/\/$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://clipcatalyst-dnuhao2qw-clip-catalyst.vercel.app').replace(/\/$/, '')
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
