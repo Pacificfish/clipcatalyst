@@ -317,8 +317,8 @@ const corsHeaders = {
 }
 
 export async function OPTIONS() {
-  // Handle CORS preflight gracefully in all environments
-  return NextResponse.json({}, { status: 204, headers: corsHeaders })
+  // Handle CORS preflight gracefully in all environments (no body for 204)
+  return new Response(null, { status: 204, headers: corsHeaders })
 }
 
 export async function GET() {
