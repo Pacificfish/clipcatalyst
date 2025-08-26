@@ -608,9 +608,14 @@ function ProjectsGrid({ token, refresh }: { token?: string, refresh?: number }) 
             <div key={p.id} className="rounded-xl ring-1 ring-white/10 p-3 bg-white/5 space-y-2">
               <div className="aspect-video w-full overflow-hidden rounded-md ring-1 ring-white/10 bg-white/5">
                 {p.thumb_url ? (
-                  <img src={p.thumb_url} alt="thumbnail" className="w-full h-full object-cover" />
+                  <img
+                    src={p.thumb_url}
+                    alt="thumbnail"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { try { (e.currentTarget as HTMLImageElement).src = '/thumb.svg' } catch {} }}
+                  />
                 ) : (
-                  <div className="w-full h-full grid place-items-center text-xs text-white/50">No thumbnail</div>
+                  <img src="/thumb.svg" alt="thumbnail" className="w-full h-full object-cover" />
                 )}
               </div>
               <div className="text-sm font-semibold truncate" title={p.title}>{p.title}</div>
