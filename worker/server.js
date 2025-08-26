@@ -107,7 +107,9 @@ app.post('/render', async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
-    const { mp3_url, csv_url, word_csv_url = '', bg_urls = [], bg_url = '', preset = 'tiktok_v1', title } = req.body || {};
+    const { mp3_url, csv_url, word_csv_url = '', bg_urls = [], bg_url = '', preset = 'tiktok_v1', title, start_ms = null, end_ms = null } = req.body || {};
+    const clipStartMs = Number.isFinite(Number(start_ms)) ? Math.max(0, Math.floor(Number(start_ms))) : null
+    const clipEndMs = Number.isFinite(Number(end_ms)) ? Math.max(0, Math.floor(Number(end_ms))) : null
     const bgCandidates = []
     if (bg_url) bgCandidates.push(bg_url)
     if (Array.isArray(bg_urls)) bgCandidates.push(...bg_urls)
@@ -227,6 +229,33 @@ app.post('/render', async (req, res) => {
       return out
     }
 
+    function clipEvents(events, start, end){
+      if (!Array.isArray(events) || !events.length) return []
+      const s = Math.max(0, Math.floor(start||0))
+      const e = Math.max(s+1, Math.floor(end||0))
+      const out = []
+      for (const ev of events){
+        const st = Math.max(ev.start, s)
+        const en = Math.min(ev.end, e)
+        if (en <= st) continue
+        out.push({ start: st - s, end: en - s, text: ev.text })
+      }
+      return out
+    }
+    function clipWordTimes(words, start, end){
+      if (!Array.isArray(words) || !words.length) return null
+      const s = Math.max(0, Math.floor(start||0))
+      const e = Math.max(s+1, Math.floor(end||0))
+      const out = []
+      for (const w of words){
+        const st = Math.max(w.start, s)
+        const en = Math.min(w.end, e)
+        if (en <= st) continue
+        out.push({ start: st - s, end: en - s, text: w.text })
+      }
+      return out.length ? out : null
+    }
+
     // Build ASS with per-word animations; exactWords optional for perfect sync
     function buildWordAss(events, SPEED, opts = {}){
       const { exactWords = null, shiftMs = 0 } = opts
@@ -309,7 +338,7 @@ app.post('/render', async (req, res) => {
       return header + outLines.join('\n') + '\n'
     }
     const csvText = fs.readFileSync(csvPath,'utf8')
-    const eventsArr = csvToEvents(csvText)
+    const allEvents = csvToEvents(csvText)
 
     // Optional exact per-word CSV
     let exactWords = null
@@ -324,13 +353,24 @@ app.post('/render', async (req, res) => {
       } catch {}
     }
 
+    let eventsArr = allEvents
+    let clipDurMs = null
+    if (clipStartMs!=null && clipEndMs!=null && clipEndMs > clipStartMs){
+      eventsArr = clipEvents(allEvents, clipStartMs, clipEndMs)
+      exactWords = clipWordTimes(exactWords, clipStartMs, clipEndMs)
+      clipDurMs = clipEndMs - clipStartMs
+    }
+
     const lastEndMs = eventsArr.length ? Math.max(...eventsArr.map(e=>e.end)) : 0
     const derivedSeconds = Math.ceil((lastEndMs||0)/1000)
-    const finalSeconds = Math.max(outSeconds, derivedSeconds)
+    let finalSeconds = Math.max(outSeconds, derivedSeconds)
+    if (clipDurMs!=null){ finalSeconds = Math.ceil(Math.max(1, clipDurMs)/1000) }
     const timingScaleRaw = Number((req.body && req.body.timing_scale) || process.env.CAPTION_TIMING_SCALE || 1)
     const timingScale = Number.isFinite(timingScaleRaw) ? Math.max(0.1, Math.min(3, timingScaleRaw)) : 1
     const shiftMsRaw = Number((req.body && req.body.shift_ms) || process.env.CAPTION_SHIFT_MS || 0)
-    const shiftMs = Number.isFinite(shiftMsRaw) ? Math.max(-1000, Math.min(1000, Math.floor(shiftMsRaw))) : 0
+    let shiftMs = Number.isFinite(shiftMsRaw) ? Math.max(-1000, Math.min(1000, Math.floor(shiftMsRaw))) : 0
+    // Shift captions so the clip starts at 0
+    if (clipDurMs!=null){ shiftMs += 0 }
     const assPath = path.join(tmp,'subs.ass')
     fs.writeFileSync(assPath, buildWordAss(eventsArr, timingScale, { exactWords, shiftMs }),'utf8')
 
@@ -349,11 +389,21 @@ app.post('/render', async (req, res) => {
 
     const assEsc = assPath.replace(/:/g,'\\:').replace(/'/g,"\\'")
     const vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,format=yuv420p,ass='${assEsc}'`
-    cmd.complexFilter([`[0:v]${vf}[v]`])
+
+    const filters = []
+    filters.push(`[0:v]${vf}[v]`)
+    let audioMap = '1:a'
+    if (clipDurMs!=null && clipStartMs!=null){
+      const startSec = (clipStartMs/1000).toFixed(3)
+      const durSec = (clipDurMs/1000).toFixed(3)
+      filters.push(`[1:a]atrim=start=${startSec}:duration=${durSec},asetpts=PTS-STARTPTS[a]`)
+      audioMap = '[a]'
+    }
+    cmd.complexFilter(filters)
 
     cmd.outputOptions([
       '-map','[v]',
-      '-map','1:a',
+      '-map', audioMap,
       '-c:v','libx264','-preset','medium','-crf','20',
       '-pix_fmt','yuv420p',
       '-c:a','aac','-b:a','192k',
@@ -379,7 +429,7 @@ app.post('/render', async (req, res) => {
       }));
       try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
       const url = `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-      res.json({ url, key });
+      res.json({ url, key, start_ms: clipStartMs, end_ms: clipEndMs, seconds: finalSeconds });
     } else {
       // Stream the MP4 directly if S3 is not configured
       const stat = fs.statSync(outPath)
@@ -538,5 +588,284 @@ app.post('/transcribe_assembly', async (req, res) => {
   }
 })
 
-app.listen(8080, () => console.log('worker listening on :8080'));
+// Batch render multiple TikTok-ready clips
+app.post('/render_batch', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    const token = req.query && (req.query.token || req.query.t)
+    const ts = req.query && (req.query.ts || req.query.time)
+    let ok = false
+    if (required){
+      if (req.header('x-shared-secret') === required) ok = true
+      else if (token && ts){
+        try {
+          const now = Math.floor(Date.now()/1000)
+          const tnum = parseInt(String(ts),10)
+          if (Math.abs(now - tnum) < 600){
+            const cryptoNode = await import('crypto')
+            const h = cryptoNode.createHmac('sha256', required).update(String(ts)).digest('hex')
+            if (h === token) ok = true
+          }
+        } catch {}
+      }
+      if (!ok) return res.status(403).json({ error: 'forbidden' })
+    }
+
+    const { mp3_url, youtube_url = '', csv_url, csv_text = '', word_csv_url = '', word_csv_text = '', segments = [], bg_urls = [], bg_url = '', preset = 'tiktok_v1' } = req.body || {}
+    if (!Array.isArray(segments) || segments.length === 0) return res.status(400).json({ error: 'segments array required' })
+
+    const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
+    if (!hasS3) return res.status(400).json({ error: 'S3 is required for batch rendering (set S3_BUCKET and AWS_REGION)' })
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-batch-'))
+    const audioPath = path.join(tmp, `${crypto.randomUUID()}.mp3`)
+    const csvPath = path.join(tmp, `${crypto.randomUUID()}.csv`)
+
+    // Load audio: prefer mp3_url, else download from YouTube
+    if (mp3_url){
+      const r = await fetch(mp3_url)
+      if (!r.ok){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'Failed to fetch mp3_url' }) }
+      fs.writeFileSync(audioPath, Buffer.from(await r.arrayBuffer()))
+    } else if (youtube_url){
+      try {
+        const ytdl = (await import('ytdl-core')).default
+        const ytStream = ytdl(String(youtube_url), { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
+        await new Promise((resolve, reject) => {
+          const ws = fs.createWriteStream(audioPath)
+          ytStream.on('error', reject)
+          ws.on('error', reject)
+          ws.on('finish', resolve)
+          ytStream.pipe(ws)
+        })
+      } catch (e) {
+        try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+        return res.status(400).json({ error: 'Failed to download audio from youtube_url', details: String(e?.message || e) })
+      }
+    } else {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(400).json({ error: 'Provide mp3_url or youtube_url' })
+    }
+
+    // Load captions CSV text: prefer csv_text, else csv_url if provided
+    let csvText = ''
+    if (csv_text){ csvText = String(csv_text) }
+    else if (csv_url){
+      const rc = await fetch(csv_url)
+      if (!rc.ok){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'Failed to fetch csv_url' }) }
+      csvText = await rc.text()
+    }
+    if (csvText){ fs.writeFileSync(csvPath, csvText, 'utf8') }
+
+    // Parse global events and optional word timings once
+    function parseCsvLine(line){
+      const parts=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ;continue}if(ch===','&&!inQ){parts.push(cur);cur='';continue}cur+=ch}parts.push(cur);return parts}
+    function hmsToMs(t){const seg=String(t).trim();const pts=seg.split(':').map(Number);if(pts.some(x=>Number.isNaN(x)))return null;let h=0,m=0,s=0;if(pts.length===2){[m,s]=pts}else if(pts.length===3){[h,m,s]=pts}else return null;return((h*60+m)*60+s)*1000}
+    function csvToEvents(text){
+      const raw = String(text)
+      const lines = raw.trim().split(/\r?\n/).filter(Boolean)
+      if (lines.length===0) return []
+      const header = lines[0].toLowerCase()
+      const body = (header.includes('time')||header.includes('start')||header.includes('text')) ? lines.slice(1) : lines
+      const ev = []
+      const SHIFT_MS = 0
+      if (header.includes('start') && header.includes('end')){
+        const rows = body
+        for (const line of rows){
+          const m = line.match(/^\s*(\d+)\s*[,\t]\s*(\d+)\s*[,\t]\s*(.*)\s*$/)
+          if (!m) continue
+          let st = Number(m[1]||0)
+          let en = Number(m[2]||0)
+          let tx = m[3]||''
+          if (tx.startsWith('"') && tx.endsWith('"')) tx = tx.slice(1,-1).replace(/""/g,'"')
+          st = Math.max(0, st + SHIFT_MS)
+          if (!(en>st)) en = st + 1
+          ev.push({ start: st, end: en, text: tx.trim() })
+        }
+        ev.sort((a,b)=>a.start-b.start)
+        for (let i=1;i<ev.length;i++){
+          if (ev[i].start > ev[i-1].end) ev[i].start = ev[i-1].end
+          if (ev[i].end <= ev[i].start) ev[i].end = ev[i].start + 1
+        }
+        return ev
+      }
+      const rows = body.map(parseCsvLine).filter(r=>r.length>=2)
+      const times = rows.map(r=>hmsToMs(r[0]))
+      /* reuse ev */
+      for (let i=0;i<rows.length;i++){
+        const t = times[i]
+        if (t==null) continue
+        const next = times[i+1]
+        const end = next!=null?Math.max(t+500,next):t+1500
+        const tx = (rows[i].slice(1).join(',')||'').trim()
+        ev.push({ start:t, end, text:tx })
+      }
+      ev.sort((a,b)=>a.start-b.start)
+      for (let i=1;i<ev.length;i++){
+        if (ev[i].start > ev[i-1].end) ev[i].start = ev[i-1].end
+        if (ev[i].end <= ev[i].start) ev[i].end = ev[i].start + 1
+      }
+      return ev
+    }
+    const allEvents = csvText ? csvToEvents(csvText) : []
+
+    function parseStartEndCsv(text){
+      const lines = String(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean)
+      const out=[]
+      for (const line of lines){
+        const m = line.match(/^\s*(\d+)\s*[,\t]\s*(\d+)\s*[,\t]\s*(.*)\s*$/)
+        if (!m) continue
+        const st = Number(m[1]||0)
+        const en = Number(m[2]||0)
+        let tx = m[3]||''
+        if (tx.startsWith('"') && tx.endsWith('"')) tx = tx.slice(1,-1).replace(/""/g,'"')
+        if (Number.isFinite(st) && Number.isFinite(en) && en>st) out.push({ start: st, end: en, text: tx.trim() })
+      }
+      return out
+    }
+    let allWords = null
+    if (word_csv_url){
+      try { const wr = await fetch(word_csv_url); if (wr.ok){ const wtext = await wr.text(); const parsed = parseStartEndCsv(wtext); if (parsed && parsed.length) allWords = parsed } } catch {}
+    }
+
+    function clipEvents(events, start, end){
+      if (!Array.isArray(events) || !events.length) return []
+      const s = Math.max(0, Math.floor(start||0))
+      const e = Math.max(s+1, Math.floor(end||0))
+      const out = []
+      for (const ev of events){
+        const st = Math.max(ev.start, s)
+        const en = Math.min(ev.end, e)
+        if (en <= st) continue
+        out.push({ start: st - s, end: en - s, text: ev.text })
+      }
+      return out
+    }
+    function clipWordTimes(words, start, end){
+      if (!Array.isArray(words) || !words.length) return null
+      const s = Math.max(0, Math.floor(start||0))
+      const e = Math.max(s+1, Math.floor(end||0))
+      const out = []
+      for (const w of words){
+        const st = Math.max(w.start, s)
+        const en = Math.min(w.end, e)
+        if (en <= st) continue
+        out.push({ start: st - s, end: en - s, text: w.text })
+      }
+      return out.length ? out : null
+    }
+
+    // Prepare optional background asset
+    const bgCandidates = []
+    if (bg_url) bgCandidates.push(bg_url)
+    if (Array.isArray(bg_urls)) bgCandidates.push(...bg_urls)
+    let bgPath = ''
+    let bgKind = 'none'
+    if (bgCandidates.length){
+      try {
+        const rbg = await fetch(bgCandidates[0])
+        if (rbg.ok){
+          const ct = String(rbg.headers.get('content-type') || '').toLowerCase()
+          const buf = Buffer.from(await rbg.arrayBuffer())
+          if (ct.startsWith('image/')){ bgPath = path.join(tmp, `${crypto.randomUUID()}.png`); fs.writeFileSync(bgPath, buf); bgKind = 'image' }
+          else { bgPath = path.join(tmp, `${crypto.randomUUID()}.mp4`); fs.writeFileSync(bgPath, buf); bgKind = 'video' }
+        }
+      } catch {}
+    }
+
+    const bucket = process.env.S3_BUCKET
+    const region = process.env.AWS_REGION
+
+    const outputs = []
+    for (const seg of segments){
+      const sMs = Math.max(0, Math.floor(Number(seg?.start_ms||0)))
+      const eMs = Math.max(sMs+1, Math.floor(Number(seg?.end_ms||0)))
+      let segEvents = clipEvents(allEvents, sMs, eMs)
+      const segWords = clipWordTimes(allWords, sMs, eMs)
+      // If no global events provided, synthesize a single event from provided text
+      if ((!allEvents || allEvents.length===0) && (!segEvents || segEvents.length===0)){
+        const txt = String(seg?.text || '').trim()
+        if (txt) segEvents = [{ start: 0, end: eMs - sMs, text: txt }]
+        else segEvents = []
+      }
+      const finalSeconds = Math.ceil((eMs - sMs)/1000)
+
+      const assHeader = `[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Word, Inter, 46, &H00FFFFFF, &H000000FF, &H00000000, &H7F000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 8, 0, 2, 80, 80, 220, 1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`
+      function msToAss(ms){const h=String(Math.floor(ms/3600000)).padStart(1,'0');const m=String(Math.floor((ms%3600000)/60000)).padStart(2,'0');const s=String(Math.floor((ms%60000)/1000)).padStart(2,'0');const cs=String(Math.floor((ms%1000)/10)).padStart(2,'0');return `${h}:${m}:${s}.${cs}`}
+      const outLines = []
+      if (Array.isArray(segWords) && segWords.length){
+        let prevEnd = 0
+        for (let i=0;i<segWords.length;i++){
+          const w = segWords[i]
+          const s = Math.max(prevEnd, Math.floor(w.start))
+          let e = Math.max(s+1, Math.floor(w.end))
+          const next = segWords[i+1]; if (next){ const ns = Math.max(prevEnd, Math.floor(next.start)); if (ns > s) e = Math.min(e, ns) }
+          const dur = Math.max(1, e - s)
+          const st = msToAss(s); const en = msToAss(e)
+          const t1 = Math.max(1, Math.floor(dur * 0.35)); const t2 = Math.max(t1+1, Math.floor(dur * 0.7))
+          const tag = `{\\an2\\bord8\\shad0\\fscx60\\fscy60\\t(0,${t1},\\fscx128\\fscy128)\\t(${t1},${t2},\\fscx100\\fscy100)}`
+          outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${w.text}`)
+          prevEnd = e
+        }
+      } else {
+        for (const ev of segEvents){
+          const text = String(ev.text||'').replace(/\s+/g,' ').trim(); if (!text) continue
+          const words = text.split(' ').filter(Boolean)
+          let cursor = ev.start
+          for (let i=0;i<words.length;i++){
+            const ws = Math.max(0, Math.floor(cursor))
+            if (ws >= ev.end) break
+            const remaining = Math.max(1, ev.end - ws)
+            const remainingWords = words.length - i
+            const base = Math.floor(remaining / remainingWords)
+            const dur = Math.max(20, base)
+            const st = msToAss(ws); const en = msToAss(ws+dur)
+            const t1 = Math.max(1, Math.floor(dur*0.35)); const t2 = Math.max(t1+1, Math.floor(dur*0.7))
+            const tag = `{\\an2\\bord8\\shad0\\fscx60\\fscy60\\t(0,${t1},\\fscx128\\fscy128)\\t(${t1},${t2},\\fscx100\\fscy100)}`
+            outLines.push(`Dialogue: 0,${st},${en},Word,,0,0,0,,${tag}${words[i]}`)
+            cursor = ws + dur
+          }
+        }
+      }
+      const assPath = path.join(tmp, `${crypto.randomUUID()}.ass`)
+      fs.writeFileSync(assPath, assHeader + outLines.join('\n') + '\n','utf8')
+
+      const outPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+      const cmd = ffmpegLib()
+      if (bgPath){ if (bgKind==='video') cmd.input(bgPath).inputOptions(['-stream_loop','-1']); else if (bgKind==='image') cmd.input(bgPath).inputOptions(['-loop','1']) }
+      else { cmd.input(`color=c=#0b0b0f:s=1080x1920:r=30:d=${finalSeconds}`).inputFormat('lavfi') }
+      cmd.input(audioPath)
+
+      const assEsc = assPath.replace(/:/g,'\\:').replace(/'/g,"\\'")
+      const vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,format=yuv420p,ass='${assEsc}'`
+      const startSec = (sMs/1000).toFixed(3)
+      const durSec = ((eMs - sMs)/1000).toFixed(3)
+      cmd.complexFilter([
+        `[0:v]${vf}[v]`,
+        `[1:a]atrim=start=${startSec}:duration=${durSec},asetpts=PTS-STARTPTS[a]`
+      ])
+      cmd.outputOptions([
+        '-map','[v]','-map','[a]',
+        '-c:v','libx264','-preset','medium','-crf','20',
+        '-pix_fmt','yuv420p','-c:a','aac','-b:a','192k',
+        '-t', String(finalSeconds)
+      ])
+
+      await new Promise((resolve, reject) => { cmd.on('end', resolve); cmd.on('error', reject); cmd.save(outPath) })
+      const body = fs.readFileSync(outPath)
+      const key = `renders/${Date.now()}-${crypto.randomUUID()}.mp4`
+      await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'video/mp4', ACL: 'public-read' }))
+      const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+      outputs.push({ url, key, start_ms: sMs, end_ms: eMs, seconds: finalSeconds, title: seg?.title || null })
+    }
+
+    try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+    res.json({ clips: outputs })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e?.message || 'batch render failed' })
+  }
+})
+
+const PORT = Number(process.env.PORT || 8080)
+app.listen(PORT, '0.0.0.0', () => console.log(`worker listening on :${PORT}`));
 
