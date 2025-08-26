@@ -442,10 +442,36 @@ export async function POST(req: Request){
     const attempts: Attempt[] = []
     let lines = await fetchTranscript(videoId, preferredLang, attempts)
     if (!lines.length){
-      // Fallback: use AssemblyAI if configured
+      // Fallback A: try AssemblyAI with page URL
       const fullUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
-      const fallback = await transcribeWithAssemblyAI(fullUrl, preferredLang, attempts)
-      if (fallback.length) lines = fallback
+      const fallbackA = await transcribeWithAssemblyAI(fullUrl, preferredLang, attempts)
+      if (fallbackA.length) lines = fallbackA
+    }
+    if (!lines.length){
+      // Fallback B: call worker to download audio and upload to AssemblyAI
+      try {
+        const WORKER = (process.env.RENDER_WORKER_URL || '').replace(/\/$/, '')
+        const SECRET = process.env.RENDER_WORKER_SECRET || process.env.SHARED_SECRET || ''
+        if (WORKER){
+          const wr = await fetch(`${WORKER}/transcribe_assembly`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(SECRET ? { 'x-shared-secret': SECRET } : {}) },
+            body: JSON.stringify({ youtube_url: `https://www.youtube.com/watch?v=${videoId}`, language: preferredLang })
+          })
+          attempts.push({ url: `${WORKER}/transcribe_assembly`, ok: wr.ok, status: wr.status })
+          if (wr.ok){
+            const j: any = await wr.json().catch(()=>null)
+            const arr: any[] = Array.isArray(j?.lines) ? j.lines : []
+            if (arr.length){
+              lines = arr.map(v => ({ start: Math.max(0, Math.floor(Number(v.start||0))), dur: Math.max(1, Math.floor(Number(v.dur||0))), text: String(v.text||'').trim() })).filter(x => x.text)
+            }
+          } else {
+            try { attempts.push({ url: 'worker:transcribe_assembly:error', ok: false, status: wr.status, error: await wr.text() }) } catch {}
+          }
+        }
+      } catch (e: any) {
+        attempts.push({ url: 'worker:transcribe_assembly', ok: false, error: String(e?.message || e) })
+      }
     }
     if (!lines.length) return NextResponse.json({ error: 'Transcript not available for this video', attempts }, { status: 404, headers })
 

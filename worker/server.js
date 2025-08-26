@@ -398,5 +398,145 @@ app.post('/render', async (req, res) => {
   }
 });
 
+// Transcribe via AssemblyAI with local audio upload (works for most YouTube URLs)
+app.post('/transcribe_assembly', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+
+    const { youtube_url, language } = req.body || {}
+    if (!youtube_url || typeof youtube_url !== 'string') return res.status(400).json({ error: 'youtube_url is required' })
+    const API = process.env.ASSEMBLYAI_API_KEY || ''
+    if (!API) return res.status(500).json({ error: 'ASSEMBLYAI_API_KEY not set' })
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'transcribe-'))
+    const audioPath = path.join(tmp, `${crypto.randomUUID()}.mp3`)
+
+    // 1) Download bestaudio from YouTube
+    try {
+      const ytdl = (await import('ytdl-core')).default
+      const ytStream = ytdl(youtube_url, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
+      await new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(audioPath)
+        ytStream.on('error', reject)
+        ws.on('error', reject)
+        ws.on('finish', resolve)
+        ytStream.pipe(ws)
+      })
+    } catch (e) {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(400).json({ error: 'Failed to download audio', details: String(e?.message || e) })
+    }
+
+    // 2) Upload to AssemblyAI (streaming)
+    let uploadUrl = ''
+    try {
+      const rs = fs.createReadStream(audioPath)
+      const up = await fetch('https://api.assemblyai.com/v2/upload', {
+        method: 'POST',
+        headers: { 'Authorization': API },
+        body: rs,
+      })
+      if (!up.ok){
+        const txt = await up.text().catch(()=> '')
+        throw new Error(`upload failed: ${up.status} ${txt}`)
+      }
+      const uj = await up.json().catch(()=>null)
+      uploadUrl = uj?.upload_url || uj?.uploadUrl || ''
+      if (!uploadUrl) throw new Error('no upload_url returned')
+    } catch (e) {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(502).json({ error: 'AssemblyAI upload failed', details: String(e?.message || e) })
+    }
+
+    // 3) Create transcript and poll
+    let transcriptId = ''
+    try {
+      const cr = await fetch('https://api.assemblyai.com/v2/transcript', {
+        method: 'POST',
+        headers: { 'Authorization': API, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audio_url: uploadUrl,
+          language_code: (typeof language === 'string' && language.length >= 2) ? language : undefined,
+          punctuate: true,
+          auto_highlights: false,
+          speaker_labels: false,
+          filter_profanity: false,
+          format_text: true,
+        })
+      })
+      if (!cr.ok){
+        const txt = await cr.text().catch(()=> '')
+        throw new Error(`create failed: ${cr.status} ${txt}`)
+      }
+      const cj = await cr.json().catch(()=>null)
+      transcriptId = cj?.id || ''
+      if (!transcriptId) throw new Error('no transcript id')
+    } catch (e) {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(502).json({ error: 'AssemblyAI create failed', details: String(e?.message || e) })
+    }
+
+    const started = Date.now()
+    let status = ''
+    let result = null
+    while (Date.now() - started < 180000){ // up to 3 minutes
+      await new Promise(r=>setTimeout(r, 3000))
+      const st = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, { headers: { 'Authorization': API } })
+      if (!st.ok) continue
+      const js = await st.json().catch(()=>null)
+      status = js?.status || ''
+      if (status === 'completed'){ result = js; break }
+      if (status === 'error'){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(502).json({ error: 'AssemblyAI error', details: js?.error || 'unknown' }) }
+    }
+
+    try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+
+    if (!result) return res.status(504).json({ error: 'transcription timeout' })
+
+    const words = Array.isArray(result?.words) ? result.words : []
+    const lines = []
+    if (words.length){
+      let curStart = Math.max(0, Math.floor(Number(words[0].start||0)))
+      let curEnd = curStart
+      let buf = ''
+      for (const w of words){
+        const ws = Math.max(0, Math.floor(Number(w.start||0)))
+        const we = Math.max(ws+1, Math.floor(Number(w.end||ws+1)))
+        const t = String(w.text||w.word||'').trim()
+        if (!t) continue
+        const tooLong = (we - curStart) > 3500
+        const punct = /[.!?]$/.test(t)
+        if (tooLong || punct){
+          const lineText = (buf ? buf + ' ' : '') + t
+          curEnd = we
+          lines.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: lineText.trim() })
+          curStart = we
+          curEnd = we
+          buf = ''
+        } else {
+          buf = buf ? (buf + ' ' + t) : t
+          curEnd = we
+        }
+      }
+      if (buf){ lines.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: buf.trim() }) }
+    } else if (result?.text){
+      const text = String(result.text||'').trim()
+      const chunks = text.split(/(?<=[.!?])\s+/)
+      let t0 = 0
+      for (const s of chunks.filter(Boolean)){
+        const st = t0; const dur = 1500; t0 += dur
+        lines.push({ start: st, dur, text: s })
+      }
+    }
+
+    if (!lines.length) return res.status(502).json({ error: 'no transcript lines' })
+
+    res.json({ lines })
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'transcribe failed' })
+  }
+})
+
 app.listen(8080, () => console.log('worker listening on :8080'));
 
