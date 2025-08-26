@@ -220,9 +220,8 @@ const res = await fetch('/api/worker/proxy', {
     setAutoErr(null);
     setAutoSegments([]);
     try {
-      const apiOrigin = (process.env.NEXT_PUBLIC_API_ORIGIN || '').replace(/\/$/, '')
-      const url = `${apiOrigin}/api/presets/autoclip?ts=${Date.now()}`.replace(/^\//, '')
-      const endpoint = apiOrigin ? url : `/api/presets/autoclip?ts=${Date.now()}`
+      const apiBase = (process.env.NEXT_PUBLIC_API_ORIGIN || (process.env.NODE_ENV === 'production' ? 'https://www.clipcatalyst.net' : '')).replace(/\/$/, '')
+      const endpoint = apiBase ? `${apiBase}/api/presets/autoclip?ts=${Date.now()}` : `/api/presets/autoclip?ts=${Date.now()}`
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
