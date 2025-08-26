@@ -42,6 +42,15 @@ export default function LabPage() {
   const [bgUrlManual, setBgUrlManual] = useState('');
   // Unified mode/preset selector
   const [view, setView] = useState<'Paste' | 'Autoclipper'>('Paste');
+  // Debug: which API base is being used
+  const [apiBase, setApiBase] = useState('')
+  useEffect(() => {
+    try {
+      const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
+      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || defaultOrigin).replace(/\/$/, '')
+      setApiBase(base)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -221,9 +230,8 @@ const res = await fetch('/api/worker/proxy', {
     setAutoSegments([]);
     try {
       const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
-      const prodDefault = 'https://clipcatalyst-dnuhao2qw-clip-catalyst.vercel.app'
-      const apiBase = (process.env.NEXT_PUBLIC_API_ORIGIN || (process.env.NODE_ENV === 'production' ? prodDefault : defaultOrigin)).replace(/\/$/, '')
-      const endpoint = `${apiBase}/api/presets/autoclip?ts=${Date.now()}`
+      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || apiBase || defaultOrigin).replace(/\/$/, '')
+      const endpoint = `${base}/api/presets/autoclip?ts=${Date.now()}&src=lab`
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -425,6 +433,7 @@ const res = await fetch('/api/worker/proxy', {
                   <button onClick={runAutoclipper} disabled={autoBusy || !ytUrl.trim()} className={`btn-primary ${autoBusy || !ytUrl.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>{autoBusy ? 'Analyzing…' : 'Suggest Highlights'}</button>
                   {autoErr && <span className="text-xs text-rose-300">{autoErr}</span>}
                 </div>
+                <div className="text-[10px] text-white/40">API endpoint: {apiBase ? `${apiBase}/api/presets/autoclip` : '/api/presets/autoclip'}</div>
                 {autoSegments.length>0 && (
                   <div className="mt-3 space-y-2">
                     <div className="text-xs text-white/60">Suggested segments</div>
