@@ -16,6 +16,8 @@ module.exports = {
     // Force any legacy calls to /api/render to hit the worker proxy
     return [
       { source: '/api/render', destination: '/api/worker/proxy' },
+      // Normalize any nested thumb.svg references to the root /thumb.svg asset
+      { source: '/:path*/thumb.svg', destination: '/thumb.svg' },
     ]
   },
   experimental: {
