@@ -310,9 +310,25 @@ function scoreSegments(lines: Array<{ start: number; dur: number; text: string }
   return out
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+}
+
+export async function OPTIONS() {
+  // Handle CORS preflight gracefully in all environments
+  return NextResponse.json({}, { status: 204, headers: corsHeaders })
+}
+
+export async function GET() {
+  // Make it explicit that only POST is supported
+  return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers: corsHeaders })
+}
+
 export async function POST(req: Request){
   try {
-    const headers = { 'Access-Control-Allow-Origin': '*' }
+    const headers = corsHeaders
 
     const authHeader = req.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })

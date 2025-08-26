@@ -220,7 +220,10 @@ const res = await fetch('/api/worker/proxy', {
     setAutoErr(null);
     setAutoSegments([]);
     try {
-      const res = await fetch('/api/presets/autoclip', {
+      const apiOrigin = (process.env.NEXT_PUBLIC_API_ORIGIN || '').replace(/\/$/, '')
+      const url = `${apiOrigin}/api/presets/autoclip?ts=${Date.now()}`.replace(/^\//, '')
+      const endpoint = apiOrigin ? url : `/api/presets/autoclip?ts=${Date.now()}`
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
