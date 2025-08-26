@@ -83,16 +83,25 @@ function parseVtt(vtt: string){
   return out
 }
 
-async function fetchTranscript(videoId: string, preferredLang?: string): Promise<Array<{ start: number; dur: number; text: string }>> {
+type Attempt = { url: string; ok: boolean; status?: number; bytes?: number; error?: string }
+
+async function fetchTranscript(videoId: string, preferredLang: string | undefined, attempts: Attempt[]): Promise<Array<{ start: number; dur: number; text: string }>> {
   // Helper: fetch with UA and timeout
   const safeGet = async (url: string) => {
     const controller = new AbortController()
     const to = setTimeout(()=>controller.abort(), 8000)
     try {
-      return await fetch(url, {
+      const res = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ClipCatalyst/1.0; +https://example.com)' },
         signal: controller.signal,
       })
+      try {
+        const text = await res.clone().text()
+        attempts.push({ url, ok: res.ok, status: res.status, bytes: text.length })
+      } catch {
+        attempts.push({ url, ok: res.ok, status: res.status })
+      }
+      return res
     } finally {
       clearTimeout(to)
     }
@@ -125,7 +134,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
             if (lang_code){ tracks.push({ lang_code, name: name || undefined, kind: kind || undefined }) }
           }
         }
-      } catch {}
+      } catch (e: any) { attempts.push({ url: u, ok: false, error: String(e?.message || e) }) }
     }
     if (tracks.length){
       // Sort: preferredLang first, then English, then others; manual before asr
@@ -151,7 +160,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
                 const parsed = parseJson3(jj)
                 if (parsed.length) return parsed
               }
-            } catch {}
+            } catch (e: any) { attempts.push({ url: base('&fmt=json3', kind), ok: false, error: String(e?.message || e) }) }
             // VTT
             try {
               const rv = await safeGet(base('&fmt=vtt', kind))
@@ -160,7 +169,7 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
                 const parsed = parseVtt(vtt)
                 if (parsed.length) return parsed
               }
-            } catch {}
+            } catch (e: any) { attempts.push({ url: base('&fmt=vtt', kind), ok: false, error: String(e?.message || e) }) }
             // XML
             try {
               const rr = await safeGet(base('', kind))
@@ -182,12 +191,12 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
                   if (out.length) return out
                 }
               }
-            } catch {}
+            } catch (e: any) { attempts.push({ url: base('', kind), ok: false, error: String(e?.message || e) }) }
           }
         }
       }
     }
-  } catch {}
+  } catch (e: any) { attempts.push({ url: 'list-tracks', ok: false, error: String(e?.message || e) }) }
 
   // 1) Try the unofficial transcript endpoint first (JSON)
   try {
@@ -197,16 +206,16 @@ async function fetchTranscript(videoId: string, preferredLang?: string): Promise
       `https://youtubetranscript.com/?video_id=${encodeURIComponent(videoId)}`,
     ]){
       try {
-        const r = await fetch(url)
+        const r = await safeGet(url)
         if (r.ok){
           const json: any = await r.json().catch(()=>null)
           if (Array.isArray(json?.transcript)){
             return json.transcript.map((row: any) => ({ start: Math.floor(Number(row.start) * 1000), dur: Math.floor(Number(row.dur) * 1000), text: String(row.text || '') }))
           }
         }
-      } catch {}
+      } catch (e: any) { attempts.push({ url, ok: false, error: String(e?.message || e) }) }
     }
-  } catch {}
+  } catch (e: any) { attempts.push({ url: 'youtubetranscript.com', ok: false, error: String(e?.message || e) }) }
 
   // 2) Fallback to YouTube timedtext (try JSON3, VTT, then XML) for a broader set of English locales
   const baseLangs = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU', 'en-IN', 'es', 'es-419', 'fr', 'de', 'pt', 'pt-BR', 'ru', 'hi', 'ja', 'ko', 'zh-Hans', 'zh-Hant']
@@ -317,8 +326,9 @@ export async function POST(req: Request){
     const windowMs = targetSec * 1000
 
     const preferredLang = (String(body.language || '').trim()) || undefined
-    const lines = await fetchTranscript(videoId, preferredLang)
-    if (!lines.length) return NextResponse.json({ error: 'Transcript not available for this video' }, { status: 404, headers })
+    const attempts: Attempt[] = []
+    const lines = await fetchTranscript(videoId, preferredLang, attempts)
+    if (!lines.length) return NextResponse.json({ error: 'Transcript not available for this video', attempts }, { status: 404, headers })
 
     const scored = scoreSegments(lines, windowMs)
     scored.sort((a, b) => b.score - a.score)
