@@ -23,13 +23,11 @@ OPENAI_API_KEY=your_openai_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=wBXNqKUATyqu0RtYt25i
 
-# S3 for uploads (required for Autoclipper uploads)
-AWS_REGION=us-east-1
-S3_BUCKET=your-bucket-name
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
+# Vercel Blob (uploads)
+# Enable Blob in Vercel → Project → Storage → Blob
+# No client credentials needed for uploads via /api/blob/upload
 
-# External render worker (required for Autoclipper)
+# External render worker
 RENDER_WORKER_URL=https://your-worker.fly.dev
 RENDER_WORKER_SECRET=your-shared-secret
 ```
