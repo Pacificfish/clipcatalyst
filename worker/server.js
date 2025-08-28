@@ -419,6 +419,20 @@ app.post('/render', async (req, res) => {
     });
 
     const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || ''
+
+    if (blobToken){
+      try {
+        const { put } = await import('@vercel/blob')
+        const body = fs.readFileSync(outPath)
+        const key = `renders/${Date.now()}-${path.basename(outPath)}`
+        const { url } = await put(key, body, { access: 'public', contentType: 'video/mp4', token: blobToken })
+        try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
+        return res.json({ url, key, start_ms: clipStartMs, end_ms: clipEndMs, seconds: finalSeconds })
+      } catch (e) {
+        console.warn('Blob upload failed, falling back:', e?.message || e)
+      }
+    }
 
     if (hasS3){
       const bucket = process.env.S3_BUCKET;
@@ -1001,9 +1015,17 @@ app.post('/render_batch', async (req, res) => {
 
       await new Promise((resolve, reject) => { cmd.on('end', resolve); cmd.on('error', reject); cmd.save(outPath) })
       const body = fs.readFileSync(outPath)
-      const key = `renders/${Date.now()}-${crypto.randomUUID()}.mp4`
       let url = ''
-      if (bucket && hasS3){
+      let key = `renders/${Date.now()}-${crypto.randomUUID()}.mp4`
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN || ''
+      if (blobToken){
+        try {
+          const { put } = await import('@vercel/blob')
+          const up = await put(key, body, { access: 'public', contentType: 'video/mp4', token: blobToken })
+          url = up.url
+        } catch (e) { console.warn('Blob upload failed:', e?.message || e) }
+      }
+      if (!url && bucket && hasS3){
         await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'video/mp4', ACL: 'public-read' }))
         url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
       }
