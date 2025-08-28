@@ -588,6 +588,156 @@ app.post('/transcribe_assembly', async (req, res) => {
   }
 })
 
+// Suggest highlights from an uploaded video URL: transcribe and propose ~3 segments
+app.post('/suggest_highlights', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+
+    const { video_url, language, target_clip_count = 3, min_ms = 18000, max_ms = 30000 } = req.body || {}
+    if (!video_url || typeof video_url !== 'string') return res.status(400).json({ error: 'video_url is required' })
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'suggest-'))
+    const vidPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+    const mp3Path = path.join(tmp, `${crypto.randomUUID()}.mp3`)
+
+    // Download the uploaded video
+    const rv = await fetch(video_url)
+    if (!rv.ok) { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'failed to fetch video_url' }) }
+    fs.writeFileSync(vidPath, Buffer.from(await rv.arrayBuffer()))
+
+    // Extract audio to MP3
+    await new Promise((resolve, reject) => {
+      try {
+        const cmd = ffmpegLib()
+        cmd.input(vidPath)
+        cmd.outputOptions(['-vn','-c:a','libmp3lame','-b:a','192k'])
+        cmd.on('end', resolve)
+        cmd.on('error', reject)
+        cmd.save(mp3Path)
+      } catch (e) { reject(e) }
+    })
+
+    // Transcribe with AssemblyAI by uploading the extracted audio
+    const API = process.env.ASSEMBLYAI_API_KEY || ''
+    if (!API) { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(500).json({ error: 'ASSEMBLYAI_API_KEY not set' }) }
+
+    let uploadUrl = ''
+    try {
+      const rs = fs.createReadStream(mp3Path)
+      const up = await fetch('https://api.assemblyai.com/v2/upload', { method: 'POST', headers: { 'Authorization': API }, body: rs })
+      if (!up.ok){ const txt = await up.text().catch(()=> ''); throw new Error(`upload failed: ${up.status} ${txt}`) }
+      const uj = await up.json().catch(()=>null)
+      uploadUrl = uj?.upload_url || uj?.uploadUrl || ''
+      if (!uploadUrl) throw new Error('no upload_url returned')
+    } catch (e) {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(502).json({ error: 'AssemblyAI upload failed', details: String(e?.message || e) })
+    }
+
+    // Create transcript and poll
+    let transcriptId = ''
+    try {
+      const cr = await fetch('https://api.assemblyai.com/v2/transcript', {
+        method: 'POST', headers: { 'Authorization': API, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_url: uploadUrl, language_code: (typeof language === 'string' && language.length >= 2) ? language : undefined, punctuate: true, format_text: true })
+      })
+      if (!cr.ok){ const txt = await cr.text().catch(()=> ''); throw new Error(`create failed: ${cr.status} ${txt}`) }
+      const cj = await cr.json().catch(()=>null)
+      transcriptId = cj?.id || ''
+      if (!transcriptId) throw new Error('no transcript id')
+    } catch (e) {
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(502).json({ error: 'AssemblyAI create failed', details: String(e?.message || e) })
+    }
+
+    const started = Date.now()
+    let status = ''
+    let result = null
+    while (Date.now() - started < 180000){
+      await new Promise(r=>setTimeout(r, 3000))
+      const st = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, { headers: { 'Authorization': API } })
+      if (!st.ok) continue
+      const js = await st.json().catch(()=>null)
+      status = js?.status || ''
+      if (status === 'completed'){ result = js; break }
+      if (status === 'error'){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(502).json({ error: 'AssemblyAI error', details: js?.error || 'unknown' }) }
+    }
+
+    // Build words and lines
+    const words = Array.isArray(result?.words) ? result.words.map((w)=>({ start: Math.max(0, Math.floor(Number(w.start||0))), end: Math.max(1, Math.floor(Number(w.end||0))), text: String(w.text||w.word||'').trim() })) : []
+    const lines = []
+    if (words.length){
+      let curStart = words[0].start
+      let curEnd = curStart
+      let buf = ''
+      for (const w of words){
+        const t = w.text
+        if (!t) continue
+        const tooLong = (w.end - curStart) > 3500
+        const punct = /[.!?]$/.test(t)
+        if (tooLong || punct){
+          const lineText = (buf ? buf + ' ' : '') + t
+          curEnd = w.end
+          lines.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: lineText.trim() })
+          curStart = w.end
+          curEnd = w.end
+          buf = ''
+        } else {
+          buf = buf ? (buf + ' ' + t) : t
+          curEnd = w.end
+        }
+      }
+      if (buf){ lines.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: buf.trim() }) }
+    } else if (result?.text){
+      const text = String(result.text||'').trim()
+      const chunks = text.split(/(?<=[.!?])\s+/)
+      let t0 = 0
+      for (const s of chunks.filter(Boolean)){
+        const st = t0; const dur = 1500; t0 += dur
+        lines.push({ start: st, dur, text: s })
+      }
+    }
+
+    // Choose ~3 segments within [min_ms, max_ms]
+    function chooseSegmentsFromLines(linesArr){
+      const out = []
+      let cursor = 0
+      let i = 0
+      while (i < linesArr.length && out.length < Number(target_clip_count||3)){
+        const segStart = Math.max(cursor, linesArr[i].start)
+        let segEnd = segStart
+        let j = i
+        while (j < linesArr.length){
+          const nextEnd = Math.max(segEnd, linesArr[j].start + linesArr[j].dur)
+          const dur = nextEnd - segStart
+          if (dur >= min_ms && dur <= max_ms){ segEnd = nextEnd; j++; break }
+          if (dur > max_ms){ break }
+          segEnd = nextEnd; j++
+        }
+        if (segEnd <= segStart){ i++; cursor = segStart; continue }
+        out.push({ start_ms: segStart, end_ms: segEnd })
+        i = j
+        cursor = segEnd
+      }
+      return out
+    }
+
+    const segments = chooseSegmentsFromLines(lines)
+
+    // Build CSV texts
+    const csv_text = lines.map(l=>`${l.start},${l.start + l.dur},"${(l.text||'').replace(/"/g,'""')}"`).join('\n')
+    const word_csv_text = words.map(w=>`${w.start},${w.end},"${(w.text||'').replace(/"/g,'""')}"`).join('\n')
+
+    try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+
+    return res.json({ mp3_url: '', video_url, segments, csv_text, word_csv_text })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e?.message || 'suggest_highlights failed' })
+  }
+})
+
 // Batch render multiple TikTok-ready clips
 app.post('/render_batch', async (req, res) => {
   try {
@@ -611,21 +761,35 @@ app.post('/render_batch', async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
-    const { mp3_url, youtube_url = '', csv_url, csv_text = '', word_csv_url = '', word_csv_text = '', segments = [], bg_urls = [], bg_url = '', preset = 'tiktok_v1' } = req.body || {}
+    const { mp3_url, video_url = '', youtube_url = '', csv_url, csv_text = '', word_csv_url = '', word_csv_text = '', segments = [], bg_urls = [], bg_url = '', preset = 'tiktok_v1' } = req.body || {}
     if (!Array.isArray(segments) || segments.length === 0) return res.status(400).json({ error: 'segments array required' })
 
     const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
-    if (!hasS3) return res.status(400).json({ error: 'S3 is required for batch rendering (set S3_BUCKET and AWS_REGION)' })
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-batch-'))
     const audioPath = path.join(tmp, `${crypto.randomUUID()}.mp3`)
     const csvPath = path.join(tmp, `${crypto.randomUUID()}.csv`)
 
-    // Load audio: prefer mp3_url, else download from YouTube
+    // Load audio: prefer mp3_url; else if video_url provided, extract; else try YouTube
     if (mp3_url){
       const r = await fetch(mp3_url)
       if (!r.ok){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'Failed to fetch mp3_url' }) }
       fs.writeFileSync(audioPath, Buffer.from(await r.arrayBuffer()))
+    } else if (video_url){
+      const rv = await fetch(String(video_url))
+      if (!rv.ok){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'Failed to fetch video_url' }) }
+      const vidPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+      fs.writeFileSync(vidPath, Buffer.from(await rv.arrayBuffer()))
+      await new Promise((resolve, reject) => {
+        try {
+          const cmd = ffmpegLib()
+          cmd.input(vidPath)
+          cmd.outputOptions(['-vn','-c:a','libmp3lame','-b:a','192k'])
+          cmd.on('end', resolve)
+          cmd.on('error', reject)
+          cmd.save(audioPath)
+        } catch (e) { reject(e) }
+      })
     } else if (youtube_url){
       try {
         const ytdl = (await import('ytdl-core')).default
@@ -643,7 +807,7 @@ app.post('/render_batch', async (req, res) => {
       }
     } else {
       try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
-      return res.status(400).json({ error: 'Provide mp3_url or youtube_url' })
+      return res.status(400).json({ error: 'Provide mp3_url or video_url or youtube_url' })
     }
 
     // Load captions CSV text: prefer csv_text, else csv_url if provided
@@ -853,12 +1017,16 @@ app.post('/render_batch', async (req, res) => {
       await new Promise((resolve, reject) => { cmd.on('end', resolve); cmd.on('error', reject); cmd.save(outPath) })
       const body = fs.readFileSync(outPath)
       const key = `renders/${Date.now()}-${crypto.randomUUID()}.mp4`
-      await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'video/mp4', ACL: 'public-read' }))
-      const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+      let url = ''
+      if (bucket && hasS3){
+        await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'video/mp4', ACL: 'public-read' }))
+        url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+      }
       outputs.push({ url, key, start_ms: sMs, end_ms: eMs, seconds: finalSeconds, title: seg?.title || null })
     }
 
     try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+    // If no storage was configured, at least return keys (empty url). Client can request downloads per-clip via a streaming endpoint in the future.
     res.json({ clips: outputs })
   } catch (e) {
     console.error(e)
