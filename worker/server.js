@@ -761,7 +761,7 @@ app.post('/render_batch', async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'forbidden' })
     }
 
-    const { mp3_url, video_url = '', youtube_url = '', csv_url, csv_text = '', word_csv_url = '', word_csv_text = '', segments = [], bg_urls = [], bg_url = '', preset = 'tiktok_v1' } = req.body || {}
+    const { mp3_url, video_url = '', csv_url, csv_text = '', word_csv_url = '', word_csv_text = '', segments = [], bg_urls = [], bg_url = '', preset = 'tiktok_v1' } = req.body || {}
     if (!Array.isArray(segments) || segments.length === 0) return res.status(400).json({ error: 'segments array required' })
 
     const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
@@ -770,7 +770,7 @@ app.post('/render_batch', async (req, res) => {
     const audioPath = path.join(tmp, `${crypto.randomUUID()}.mp3`)
     const csvPath = path.join(tmp, `${crypto.randomUUID()}.csv`)
 
-    // Load audio: prefer mp3_url; else if video_url provided, extract; else try YouTube
+    // Load audio: prefer mp3_url; else if video_url provided, extract; disallow external links (YouTube) to enforce uploads
     if (mp3_url){
       const r = await fetch(mp3_url)
       if (!r.ok){ try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'Failed to fetch mp3_url' }) }
@@ -790,24 +790,9 @@ app.post('/render_batch', async (req, res) => {
           cmd.save(audioPath)
         } catch (e) { reject(e) }
       })
-    } else if (youtube_url){
-      try {
-        const ytdl = (await import('ytdl-core')).default
-        const ytStream = ytdl(String(youtube_url), { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
-        await new Promise((resolve, reject) => {
-          const ws = fs.createWriteStream(audioPath)
-          ytStream.on('error', reject)
-          ws.on('error', reject)
-          ws.on('finish', resolve)
-          ytStream.pipe(ws)
-        })
-      } catch (e) {
-        try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
-        return res.status(400).json({ error: 'Failed to download audio from youtube_url', details: String(e?.message || e) })
-      }
     } else {
       try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
-      return res.status(400).json({ error: 'Provide mp3_url or video_url or youtube_url' })
+      return res.status(400).json({ error: 'Provide video_url (uploaded) or mp3_url' })
     }
 
     // Load captions CSV text: prefer csv_text, else csv_url if provided
