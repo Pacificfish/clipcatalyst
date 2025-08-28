@@ -39,6 +39,14 @@ export default function Nav() {
         <nav className="ml-auto flex items-center gap-2">
           <Link href="/lab" className="btn">Lab</Link>
           <Link href="/profile" className="btn">Profile</Link>
+          {session && (
+            <span className="hidden sm:inline text-xs text-emerald-300 ring-1 ring-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 rounded">
+              Signed in
+            </span>
+          )}
+          {email && (
+            <span className="hidden md:inline text-[11px] text-white/60">{email}</span>
+          )}
           {!session ? (
             <div className="flex items-center gap-2">
               <button onClick={loginWithGoogle} className="btn">Sign in with Google</button>
@@ -49,7 +57,6 @@ export default function Nav() {
           )}
         </nav>
       </div>
-      {email && <div className="text-xs text-white/60 container pb-2">Signed in as {email}</div>}
     </header>
   );
 }

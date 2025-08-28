@@ -318,14 +318,6 @@ export default function LabPage() {
             {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
           </div>
 
-          {/* Veo3 (feature-gated) */}
-          {process.env.NEXT_PUBLIC_ENABLE_VEO3 === '1' && (
-            <div className="mt-8 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-              <div className="text-sm font-semibold">AI Video (Veo3)</div>
-              <p className="text-xs text-white/60">Generate an AI video from a text prompt. Configure provider env vars to enable.</p>
-              <Veo3Form token={session?.access_token} />
-            </div>
-          )}
 
           {/* Error */}
           {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
@@ -355,75 +347,130 @@ export default function LabPage() {
           {/* Previous projects grid */}
           <ProjectsGrid token={session?.access_token} />
         </div>
+
+        {/* Autoclipper: upload a video and get 3 TikTok-ready clips */}
+        <div className="card p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Autoclipper (upload video)</h2>
+          <Autoclipper />
+        </div>
       </main>
     </>
   );
 }
 
-function Veo3Form({ token }: { token?: string }) {
-  const [prompt, setPrompt] = useState('A cinematic drone shot over neon city at night')
-  const [duration, setDuration] = useState(6)
-  const [ar, setAr] = useState<'9:16' | '1:1' | '16:9'>('9:16')
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+function Autoclipper() {
+  const [file, setFile] = useState<File | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [status, setStatus] = useState<string>('')
+  const [uploadedUrl, setUploadedUrl] = useState<string>('')
+  const [language, setLanguage] = useState('en')
+  const [autoRender, setAutoRender] = useState(false)
+  const [isWorking, setIsWorking] = useState(false)
+  const [segments, setSegments] = useState<Array<{ start_ms: number; end_ms: number }>>([])
+  const [clips, setClips] = useState<Array<{ url: string; start_ms: number; end_ms: number; title?: string | null }>>([])
+  const [error, setError] = useState<string | null>(null)
 
-  async function onGenerate() {
-    setLoading(true); setErr(null)
+  async function uploadToBlob(f: File): Promise<string> {
+    setStatus('Uploading to Blob...')
+    const r = await fetch('/api/blob/upload', {
+      method: 'POST',
+      headers: { 'content-type': f.type || 'application/octet-stream', 'x-filename': f.name || 'upload.mp4' },
+      body: f,
+    })
+    const j = await r.json()
+    if (!r.ok) throw new Error(j?.error || 'Blob upload failed')
+    return String(j.url)
+  }
+
+  async function onSuggest() {
+    setError(null)
+    setSegments([])
+    setClips([])
     try {
-      const res = await fetch('/api/video/veo3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ prompt, duration, aspect_ratio: ar }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'Failed to start Veo3 job')
-      if (data?.video_url) {
-        const a = document.createElement('a')
-        a.href = data.video_url
-        a.download = `veo3-${Date.now()}.mp4`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-      } else {
-        alert(data?.message || 'Veo3 job accepted. Check back soon.')
-      }
+      if (!file) throw new Error('Select a video file first')
+      setIsWorking(true)
+      const url = uploadedUrl || await uploadToBlob(file)
+      setUploadedUrl(url)
+      setStatus('Analyzing...')
+      const r = await fetch('/api/presets/autoclip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_type: 'upload', source_url: url, language, auto_render: autoRender }) })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'Suggest highlights failed')
+      setSegments(Array.isArray(j?.segments) ? j.segments : [])
+      setClips(Array.isArray(j?.clips) ? j.clips : [])
+      setStatus('Done')
     } catch (e: any) {
-      setErr(e?.message || 'Failed to generate video')
+      setError(e?.message || 'Failed')
     } finally {
-      setLoading(false)
+      setIsWorking(false)
     }
   }
 
   return (
     <div className="space-y-3">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-white/60">Prompt</span>
-        <textarea className="w-full h-24 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" value={prompt} onChange={e => setPrompt(e.target.value)} />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Duration (sec)</span>
-          <input type="number" min={2} max={10} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={duration} onChange={e => setDuration(parseInt(e.target.value || '6', 10))} />
+      <div className="grid gap-3 sm:grid-cols-3 items-end">
+        <label className="sm:col-span-2">
+          <div className="text-xs text-white/60 mb-1">Choose video file (mp4/mov/webm)</div>
+          <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e)=>{ setFile(e.target.files?.[0] || null); setUploadedUrl(''); setProgress(0); setStatus('') }} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Aspect ratio</span>
-          <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={ar} onChange={e => setAr(e.target.value as any)}>
-            <option value="9:16">9:16</option>
-            <option value="1:1">1:1</option>
-            <option value="16:9">16:9</option>
+          <span className="text-xs text-white/60">Transcript language</span>
+          <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e)=>setLanguage(e.target.value)}>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="pt">Portuguese</option>
+            <option value="ru">Russian</option>
+            <option value="hi">Hindi</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese (Simplified)</option>
+            <option value="zh-TW">Chinese (Traditional)</option>
           </select>
         </label>
       </div>
-      {err && <div className="text-xs text-rose-300">{err}</div>}
-      <button onClick={onGenerate} disabled={loading} className={`btn-primary ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}>
-        {loading ? 'Generating…' : 'Generate with Veo3'}
-      </button>
+
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={autoRender} onChange={(e)=>setAutoRender(e.target.checked)} />
+          Auto-render top 3 clips
+        </label>
+        <button className="btn-primary" onClick={onSuggest} disabled={isWorking || !file}>
+          {isWorking ? 'Working…' : 'Suggest Highlights'}
+        </button>
+      </div>
+
+      {(progress > 0 || status) && (
+        <div className="text-xs text-white/60">{status} {progress ? `(${progress}%)` : ''}</div>
+      )}
+
+      {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
+
+      {segments.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-semibold">Suggested segments</div>
+          <ol className="text-xs text-white/70 list-decimal pl-5 space-y-1">
+            {segments.map((s, i)=> (
+              <li key={i}>Start {Math.round(s.start_ms/1000)}s – End {Math.round(s.end_ms/1000)}s ({Math.round((s.end_ms - s.start_ms)/1000)}s)</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {clips.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-semibold">Rendered clips</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {clips.map((c, i)=> (
+              <a key={i} className="btn" href={c.url} target="_blank">Download clip {i+1}</a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
 
 function ProjectsGrid({ token }: { token?: string }) {
   const [items, setItems] = useState<Array<{ id: string; title: string; mp3_url: string; csv_url: string; thumb_url: string | null; updated_at: string | null }>>([]);
