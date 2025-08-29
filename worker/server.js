@@ -485,7 +485,7 @@ app.post('/transcribe_assembly', async (req, res) => {
 
     // 1) Download bestaudio from YouTube
     try {
-      const ytdl = (await import('ytdl-core')).default
+      const ytdl = (await import('@distube/ytdl-core')).default
       const ytStream = ytdl(youtube_url, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
       await new Promise((resolve, reject) => {
         const ws = fs.createWriteStream(audioPath)
@@ -774,8 +774,13 @@ app.post('/download_youtube', async (req, res) => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'yt-'))
     const outPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
 
-    const ytdl = (await import('ytdl-core')).default
-    const info = await ytdl.getInfo(youtube_url)
+    const ytdl = (await import('@distube/ytdl-core')).default
+    // Sanitize URL to avoid extra params like &t=, and add realistic headers to avoid bot checks
+    let videoId = ''
+    try { videoId = ytdl.getURLVideoID(youtube_url) } catch {}
+    const cleanUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : youtube_url
+    const REQ = { requestOptions: { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', 'accept-language': 'en-US,en;q=0.9', 'dnt': '1', 'upgrade-insecure-requests': '1' } } }
+    const info = await ytdl.getInfo(cleanUrl, REQ)
     const title = info?.videoDetails?.title || ''
     const length_seconds = Number(info?.videoDetails?.lengthSeconds || 0) || 0
 
@@ -788,7 +793,7 @@ app.post('/download_youtube', async (req, res) => {
     if (fmt && fmt.itag){
       // Download progressive stream directly to MP4 file
       await new Promise((resolve, reject) => {
-        const stream = ytdl(youtube_url, { quality: fmt.itag, highWaterMark: 1<<25 })
+        const stream = ytdl(cleanUrl, { quality: fmt.itag, highWaterMark: 1<<25, ...REQ })
         const ws = fs.createWriteStream(outPath)
         stream.on('error', reject)
         ws.on('error', reject)
@@ -800,7 +805,7 @@ app.post('/download_youtube', async (req, res) => {
       const vPath = path.join(tmp, `${crypto.randomUUID()}.video`)
       const aPath = path.join(tmp, `${crypto.randomUUID()}.audio`)
       await new Promise((resolve, reject) => {
-        const vs = ytdl(youtube_url, { quality: 'highestvideo', filter: 'videoonly', highWaterMark: 1<<25 })
+        const vs = ytdl(cleanUrl, { quality: 'highestvideo', filter: 'videoonly', highWaterMark: 1<<25, ...REQ })
         const ws = fs.createWriteStream(vPath)
         let done = false
         const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
@@ -810,7 +815,7 @@ app.post('/download_youtube', async (req, res) => {
         vs.pipe(ws)
       })
       await new Promise((resolve, reject) => {
-        const as = ytdl(youtube_url, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
+        const as = ytdl(cleanUrl, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25, ...REQ })
         const ws = fs.createWriteStream(aPath)
         let done = false
         const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
@@ -836,7 +841,7 @@ app.post('/download_youtube', async (req, res) => {
     // Upload or stream
     const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN || ''
-    const key = `uploads/youtube/${Date.now()}-${crypto.randomUUID()}.mp4`
+    const key = `renders/${Date.now()}-${crypto.randomUUID()}.mp4`
 
     if (blobToken){
       try {
