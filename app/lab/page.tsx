@@ -268,105 +268,110 @@ export default function LabPage() {
             </label>
           </div>
 
-          {/* Title */}
-          <div>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Project title (required)</span>
-              <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </label>
-          </div>
+          {/* Title, Source input, Options, and Actions are hidden in Autoclipper mode */}
+          {sourceType !== 'upload' && (
+            <>
+              {/* Title */}
+              <div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Project title (required)</span>
+                  <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </label>
+              </div>
 
-          {/* Source input */}
-          <div>
-            {sourceType === 'paste' ? (
-              <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            ) : null}
-          </div>
+              {/* Source input */}
+              <div>
+                {sourceType === 'paste' ? (
+                  <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
+                ) : null}
+              </div>
+
+              {/* Options */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Language</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Tone</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Topic (optional)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
+                </label>
+              </div>
+
+              {/* Style preset, b‑roll and music */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
+                  TikTok style preset
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
+                  Auto b‑roll
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-1">
+                  <span className="text-xs text-white/60">Background music URL (optional)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-1">
+                  <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-3">
+                  <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
+                </label>
+              </div>
+
+              {/* Generate */}
+              <div className="mt-2 flex items-center gap-3">
+                <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  {isLoading ? 'Generating…' : 'Generate'}
+                </button>
+                <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
+                {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
+              </div>
+
+
+              {/* Error */}
+              {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
+
+              {/* Result */}
+              {result && (
+                <div className="pt-4 space-y-3">
+                  {result.mp3_url && (
+                    <div className="space-y-2">
+                      <audio controls src={result.mp3_url} className="w-full" />
+                      <div className="flex gap-2">
+                        <a className="btn" href={result.mp3_url} target="_blank">Download MP3</a>
+                        <button className="btn-primary" onClick={handleRender} disabled={isRendering || !result.csv_url}>
+                          {isRendering ? 'Rendering…' : 'Render Video (MP4)'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {result.csv_url && (
+                    <div>
+                      <a className="btn" href={result.csv_url} target="_blank">Download CSV</a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Previous projects grid */}
+              <ProjectsGrid token={session?.access_token} />
+            </>
+          )}
 
           {/* Upload (Autoclipper inline) */}
           {sourceType === 'upload' && (
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
-              <Autoclipper initialUrl={initialUploadUrl} />
+              <AutoclipperSimple />
             </div>
           )}
-
-          {/* Options */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Language</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Tone</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-white/60">Topic (optional)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
-            </label>
-          </div>
-
-          {/* Style preset, b‑roll and music */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
-              TikTok style preset
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
-              Auto b‑roll
-            </label>
-            <label className="flex flex-col gap-1 sm:col-span-1">
-              <span className="text-xs text-white/60">Background music URL (optional)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 sm:col-span-1">
-              <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 sm:col-span-3">
-              <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
-              <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
-            </label>
-          </div>
-
-          {/* Generate */}
-          <div className="mt-2 flex items-center gap-3">
-            <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-              {isLoading ? 'Generating…' : 'Generate'}
-            </button>
-            <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
-            {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
-          </div>
-
-
-          {/* Error */}
-          {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
-
-          {/* Result */}
-          {result && (
-            <div className="pt-4 space-y-3">
-              {result.mp3_url && (
-                <div className="space-y-2">
-                  <audio controls src={result.mp3_url} className="w-full" />
-                  <div className="flex gap-2">
-                    <a className="btn" href={result.mp3_url} target="_blank">Download MP3</a>
-                    <button className="btn-primary" onClick={handleRender} disabled={isRendering || !result.csv_url}>
-                      {isRendering ? 'Rendering…' : 'Render Video (MP4)'}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {result.csv_url && (
-                <div>
-                  <a className="btn" href={result.csv_url} target="_blank">Download CSV</a>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Previous projects grid */}
-          <ProjectsGrid token={session?.access_token} />
         </div>
 
         {/* Upload and YouTube are now integrated above via the Source dropdown */}
@@ -376,22 +381,13 @@ export default function LabPage() {
 }
 
 
-function Autoclipper({ initialUrl }: { initialUrl?: string }) {
+function AutoclipperSimple() {
   const [file, setFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState<string>('')
   const [uploadedUrl, setUploadedUrl] = useState<string>('')
-  const [language, setLanguage] = useState('en')
-  const [autoRender, setAutoRender] = useState(false)
-  const [isWorking, setIsWorking] = useState(false)
-  const [segments, setSegments] = useState<Array<{ start_ms: number; end_ms: number }>>([])
-  const [clips, setClips] = useState<Array<{ url: string; start_ms: number; end_ms: number; title?: string | null }>>([])
+  const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Prefill uploadedUrl from YouTube downloader handoff
-  useEffect(() => {
-    if (initialUrl && !uploadedUrl) setUploadedUrl(initialUrl)
-  }, [initialUrl, uploadedUrl])
 
   async function uploadToBlob(f: File): Promise<string> {
     setStatus('Uploading to Blob...')
@@ -405,100 +401,79 @@ function Autoclipper({ initialUrl }: { initialUrl?: string }) {
     return String(j.url)
   }
 
-  async function onSuggest() {
-    setError(null)
-    setSegments([])
-    setClips([])
+  async function onFileChange(f?: File | null) {
     try {
-      if (!file) throw new Error('Select a video file first')
-      setIsWorking(true)
-      const url = uploadedUrl || await uploadToBlob(file)
+      setError(null)
+      setStatus('')
+      if (!f) return
+      setIsUploading(true)
+      const url = await uploadToBlob(f)
       setUploadedUrl(url)
-      setStatus('Analyzing...')
-      const r = await fetch('/api/presets/autoclip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source_type: 'upload', source_url: url, language, auto_render: autoRender }) })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j?.error || 'Suggest highlights failed')
-      setSegments(Array.isArray(j?.segments) ? j.segments : [])
-      setClips(Array.isArray(j?.clips) ? j.clips : [])
-      setStatus('Done')
+      setStatus('Uploaded.')
     } catch (e: any) {
-      setError(e?.message || 'Failed')
+      setError(e?.message || 'Upload failed')
     } finally {
-      setIsWorking(false)
+      setIsUploading(false)
     }
   }
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3 items-end">
-        <label className="sm:col-span-2">
-          <div className="text-xs text-white/60 mb-1">Choose video file (mp4/mov/webm)</div>
-          <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e)=>{ setFile(e.target.files?.[0] || null); setUploadedUrl(''); setProgress(0); setStatus('') }} />
-          {uploadedUrl && (
-            <div className="mt-2 text-xs text-white/70">
-              Using uploaded URL: <a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">open</a>
-            </div>
-          )}
-        </label>
+    <div className="space-y-4">
+      {/* Upload video */}
+      <div>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Transcript language</span>
-          <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e)=>setLanguage(e.target.value)}>
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="pt">Portuguese</option>
-            <option value="ru">Russian</option>
-            <option value="hi">Hindi</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="zh">Chinese (Simplified)</option>
-            <option value="zh-TW">Chinese (Traditional)</option>
-          </select>
+          <span className="text-xs text-white/60">Upload a video (mp4/mov/webm)</span>
+          <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e)=>{ const f = e.target.files?.[0] || null; setFile(f); setUploadedUrl(''); setProgress(0); setStatus(''); if (f) void onFileChange(f) }} />
         </label>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={autoRender} onChange={(e)=>setAutoRender(e.target.checked)} />
-          Auto-render top 3 clips
-        </label>
-        <button className="btn-primary" onClick={onSuggest} disabled={isWorking || !file}>
-          {isWorking ? 'Working…' : 'Suggest Highlights'}
-        </button>
-      </div>
-
-      {(progress > 0 || status) && (
-        <div className="text-xs text-white/60">{status} {progress ? `(${progress}%)` : ''}</div>
-      )}
-
-      {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
-
-      {segments.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-semibold">Suggested segments</div>
-          <ol className="text-xs text-white/70 list-decimal pl-5 space-y-1">
-            {segments.map((s, i)=> (
-              <li key={i}>Start {Math.round(s.start_ms/1000)}s – End {Math.round(s.end_ms/1000)}s ({Math.round((s.end_ms - s.start_ms)/1000)}s)</li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {clips.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-semibold">Rendered clips</div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {clips.map((c, i)=> (
-              <a key={i} className="btn" href={c.url} target="_blank">Download clip {i+1}</a>
-            ))}
+        {(status || uploadedUrl) && (
+          <div className="mt-2 text-xs text-white/70">
+            {status} {uploadedUrl && (<><span className="mx-1">•</span><a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">Open uploaded file</a></>)}
           </div>
-        </div>
-      )}
+        )}
+        {error && <div className="mt-2 rounded-lg border border-rose-400/40 bg-rose-500/10 p-2 text-xs text-rose-200">{error}</div>}
+      </div>
+
+      {/* Paste YouTube URL to download */}
+      <div className="space-y-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-white/60">Or paste a YouTube link to download</span>
+          <YouTubeMini />
+        </label>
+      </div>
     </div>
   )
 }
 
+
+function YouTubeMini(){
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [result, setResult] = useState<{ url: string; key?: string } | null>(null)
+
+  async function onDownload(){
+    try {
+      setLoading(true); setErr(null); setResult(null)
+      const r = await fetch('/api/download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: url.trim() }) })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
+      if (!j?.url) throw new Error('Unexpected response')
+      setResult(j)
+    } catch (e: any) { setErr(e?.message || 'Failed') } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 items-center">
+        <input type="url" className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={url} onChange={e=>setUrl(e.target.value)} />
+        <button className="btn" onClick={onDownload} disabled={loading || !url.trim()}>{loading ? 'Downloading…' : 'Download'}</button>
+      </div>
+      {err && <div className="text-xs text-rose-300">{err}</div>}
+      {result?.url && (
+        <div className="text-xs text-white/70">Done • <a className="underline" href={result.url} target="_blank" rel="noreferrer">Open file</a></div>
+      )}
+    </div>
+  )
+}
 
 function ProjectsGrid({ token }: { token?: string }) {
   const [items, setItems] = useState<Array<{ id: string; title: string; mp3_url: string; csv_url: string; thumb_url: string | null; updated_at: string | null }>>([]);
