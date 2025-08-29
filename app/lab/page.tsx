@@ -31,6 +31,10 @@ export default function LabPage() {
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
+  // Source dropdown state
+  const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
+  const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
+  const [ytLastUrl, setYtLastUrl] = useState<string>('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -246,10 +250,27 @@ export default function LabPage() {
         </header>
 
         <div className="card p-6 space-y-4">
-          {/* Mode selector */}
-          <div className="flex gap-2">
-            <button className={`btn ${mode === 'Paste' ? '!bg-white/15' : ''}`} onClick={() => setMode('Paste')}>Paste</button>
-            <button className={`btn ${mode === 'URL' ? '!bg-white/15' : ''}`} onClick={() => setMode('URL')}>URL</button>
+          {/* Source selector */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 sm:col-span-1">
+              <span className="text-xs text-white/60">Source</span>
+              <select
+                className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2"
+                value={sourceType}
+                onChange={(e) => {
+                  const v = e.target.value as 'paste' | 'article' | 'youtube' | 'upload'
+                  setSourceType(v)
+                  // Keep legacy mode in sync for generate flow
+                  if (v === 'paste') setMode('Paste')
+                  if (v === 'article') setMode('URL')
+                }}
+              >
+                <option value="paste">Paste text</option>
+                <option value="article">Article URL</option>
+                <option value="youtube">YouTube URL</option>
+                <option value="upload">Upload video</option>
+              </select>
+            </label>
           </div>
 
           {/* Title */}
@@ -262,12 +283,26 @@ export default function LabPage() {
 
           {/* Source input */}
           <div>
-            {mode === 'Paste' ? (
+            {sourceType === 'paste' ? (
               <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            ) : (
+            ) : sourceType === 'article' ? (
               <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e) => setSource(e.target.value)} />
-            )}
+            ) : null}
           </div>
+
+          {/* YouTube downloader (inline) */}
+          {sourceType === 'youtube' && (
+            <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
+              <YouTubeDownloader onDone={(u)=>{ setYtLastUrl(u); setInitialUploadUrl(u); setSourceType('upload'); }} />
+            </div>
+          )}
+
+          {/* Upload (Autoclipper inline) */}
+          {sourceType === 'upload' && (
+            <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
+              <Autoclipper initialUrl={initialUploadUrl} />
+            </div>
+          )}
 
           {/* Options */}
           <div className="grid gap-3 sm:grid-cols-3">
@@ -348,23 +383,13 @@ export default function LabPage() {
           <ProjectsGrid token={session?.access_token} />
         </div>
 
-        {/* Autoclipper: upload a video and get 3 TikTok-ready clips */}
-        <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Autoclipper (upload video)</h2>
-          <Autoclipper />
-        </div>
-
-        {/* Download from YouTube: paste link and upload to Blob */}
-        <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Download from YouTube</h2>
-          <YouTubeDownloader />
-        </div>
+        {/* Upload and YouTube are now integrated above via the Source dropdown */}
       </main>
     </>
   );
 }
 
-function YouTubeDownloader() {
+function YouTubeDownloader({ onDone }: { onDone?: (url: string) => void }) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -404,16 +429,21 @@ function YouTubeDownloader() {
         {error && <span className="text-xs text-rose-300">{error}</span>}
       </div>
       {result?.url && (
-        <div className="text-sm">
+        <div className="space-y-2 text-sm">
           <div className="text-white/70">Uploaded to:</div>
-          <a className="btn" href={result.url} target="_blank" rel="noreferrer">{result.url}</a>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a className="btn" href={result.url} target="_blank" rel="noreferrer">Open file</a>
+            {onDone && (
+              <button className="btn" onClick={() => onDone(result.url!)}>Use in Autoclipper</button>
+            )}
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-function Autoclipper() {
+function Autoclipper({ initialUrl }: { initialUrl?: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState<string>('')
@@ -424,6 +454,11 @@ function Autoclipper() {
   const [segments, setSegments] = useState<Array<{ start_ms: number; end_ms: number }>>([])
   const [clips, setClips] = useState<Array<{ url: string; start_ms: number; end_ms: number; title?: string | null }>>([])
   const [error, setError] = useState<string | null>(null)
+
+  // Prefill uploadedUrl from YouTube downloader handoff
+  useEffect(() => {
+    if (initialUrl && !uploadedUrl) setUploadedUrl(initialUrl)
+  }, [initialUrl, uploadedUrl])
 
   async function uploadToBlob(f: File): Promise<string> {
     setStatus('Uploading to Blob...')
@@ -466,6 +501,11 @@ function Autoclipper() {
         <label className="sm:col-span-2">
           <div className="text-xs text-white/60 mb-1">Choose video file (mp4/mov/webm)</div>
           <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e)=>{ setFile(e.target.files?.[0] || null); setUploadedUrl(''); setProgress(0); setStatus('') }} />
+          {uploadedUrl && (
+            <div className="mt-2 text-xs text-white/70">
+              Using uploaded URL: <a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">open</a>
+            </div>
+          )}
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs text-white/60">Transcript language</span>
