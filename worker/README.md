@@ -4,6 +4,14 @@ Endpoints:
 
 - GET /healthz
 - GET /diag
+- POST /download_youtube
+  - Inputs (JSON): { youtube_url: string }
+  - Behavior:
+    - Tries to download a progressive MP4 (audio+video). If unavailable, downloads best video+audio separately and merges via ffmpeg to MP4 (H.264/AAC).
+    - If BLOB_READ_WRITE_TOKEN is set: uploads to Vercel Blob and returns { url, key, title?, length_seconds? }
+    - Else if S3 configured: uploads to S3 and returns { url, key, title?, length_seconds? }
+    - Else: streams the MP4 file directly in the response.
+  - Auth: if SHARED_SECRET is set, require `x-shared-secret` header.
 - POST /render
   - Inputs (JSON):
     - mp3_url (string, required): public URL to source audio in MP3
@@ -13,7 +21,8 @@ Endpoints:
     - start_ms, end_ms (number, optional): when set, trims to a sub-clip window
     - preset (string, optional): 'tiktok_v1' (1080x1920 H.264/AAC)
   - Output: 200
-    - If S3 configured (S3_BUCKET + AWS_REGION + credentials): { url, key, start_ms?, end_ms?, seconds }
+    - If BLOB_READ_WRITE_TOKEN is set: uploads to Vercel Blob and returns { url, key, start_ms?, end_ms?, seconds }
+    - Else if S3 configured (S3_BUCKET + AWS_REGION + credentials): returns { url, key, start_ms?, end_ms?, seconds }
     - Else: streams MP4 bytes
   - Auth: set SHARED_SECRET on the worker; caller may authenticate via header `x-shared-secret` or signed query `?t=HMAC_SHA256(ts)&ts=UNIX_EPOCH`.
 
@@ -42,7 +51,9 @@ Notes:
 
 Environment Variables:
 - SHARED_SECRET (recommended)
-- S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or IAM role
-- ASSEMBLYAI_API_KEY (only needed for /transcribe_assembly)
+- BLOB_READ_WRITE_TOKEN (optional): if set, uploads outputs to Vercel Blob (public) and returns their URLs
+- S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or IAM role (optional fallback if Blob token not set)
+- ASSEMBLYAI_API_KEY (only needed for /transcribe_assembly and /suggest_highlights)
 - FFMPEG_PATH, FFPROBE_PATH (optional; autodetected)
+- CAPTION_TIMING_SCALE, CAPTION_SHIFT_MS (optional)
 

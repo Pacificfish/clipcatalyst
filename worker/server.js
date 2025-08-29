@@ -80,7 +80,14 @@ app.get('/diag', (req, res) => {
     ffprobePath,
     ffmpegRunnable: Boolean(firstRunnable([ffmpegPath])),
     ffprobeRunnable: Boolean(firstRunnable([ffprobePath])),
-    env: { FFMPEG_PATH: process.env.FFMPEG_PATH || '', FFPROBE_PATH: process.env.FFPROBE_PATH || '' }
+    hasBlob: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    hasS3: Boolean(process.env.S3_BUCKET && process.env.AWS_REGION),
+    env: {
+      FFMPEG_PATH: process.env.FFMPEG_PATH || '',
+      FFPROBE_PATH: process.env.FFPROBE_PATH || '',
+      AWS_REGION: process.env.AWS_REGION || '',
+      S3_BUCKET: process.env.S3_BUCKET || ''
+    }
   }
   res.json(out)
 });
@@ -753,6 +760,117 @@ app.post('/suggest_highlights', async (req, res) => {
 })
 
 // Batch render multiple TikTok-ready clips
+// Download a YouTube video and make it available (Blob/S3/stream)
+// Body: { youtube_url: string }
+// Returns: { url, key, title?, length_seconds? } when storage configured, else streams MP4
+app.post('/download_youtube', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+
+    const youtube_url = String((req.body && req.body.youtube_url) || '').trim()
+    if (!youtube_url) return res.status(400).json({ error: 'youtube_url is required' })
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'yt-'))
+    const outPath = path.join(tmp, `${crypto.randomUUID()}.mp4`)
+
+    const ytdl = (await import('ytdl-core')).default
+    const info = await ytdl.getInfo(youtube_url)
+    const title = info?.videoDetails?.title || ''
+    const length_seconds = Number(info?.videoDetails?.lengthSeconds || 0) || 0
+
+    // Try to find a progressive (audio+video) MP4 format first
+    const avFormats = ytdl.filterFormats(info.formats, 'videoandaudio') || []
+    let fmt = avFormats.filter(f => String(f.container||'').toLowerCase()==='mp4')
+      .sort((a,b)=> (Number(b.width||0) - Number(a.width||0)) || (Number(b.bitrate||0) - Number(a.bitrate||0)))[0]
+    if (!fmt) fmt = avFormats.sort((a,b)=> (Number(b.width||0) - Number(a.width||0)) || (Number(b.bitrate||0) - Number(a.bitrate||0)))[0]
+
+    if (fmt && fmt.itag){
+      // Download progressive stream directly to MP4 file
+      await new Promise((resolve, reject) => {
+        const stream = ytdl(youtube_url, { quality: fmt.itag, highWaterMark: 1<<25 })
+        const ws = fs.createWriteStream(outPath)
+        stream.on('error', reject)
+        ws.on('error', reject)
+        ws.on('finish', resolve)
+        stream.pipe(ws)
+      })
+    } else {
+      // Fallback: download best video-only + best audio-only and merge/transcode
+      const vPath = path.join(tmp, `${crypto.randomUUID()}.video`)
+      const aPath = path.join(tmp, `${crypto.randomUUID()}.audio`)
+      await new Promise((resolve, reject) => {
+        const vs = ytdl(youtube_url, { quality: 'highestvideo', filter: 'videoonly', highWaterMark: 1<<25 })
+        const ws = fs.createWriteStream(vPath)
+        let done = false
+        const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
+        vs.on('error', reject)
+        ws.on('error', reject)
+        ws.on('finish', finish)
+        vs.pipe(ws)
+      })
+      await new Promise((resolve, reject) => {
+        const as = ytdl(youtube_url, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25 })
+        const ws = fs.createWriteStream(aPath)
+        let done = false
+        const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
+        as.on('error', reject)
+        ws.on('error', reject)
+        ws.on('finish', finish)
+        as.pipe(ws)
+      })
+      // Merge with ffmpeg (transcode to ensure MP4 H.264/AAC)
+      await new Promise((resolve, reject) => {
+        try {
+          const cmd = ffmpegLib()
+          cmd.input(vPath)
+          cmd.input(aPath)
+          cmd.outputOptions(['-c:v','libx264','-preset','medium','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k'])
+          cmd.on('end', resolve)
+          cmd.on('error', reject)
+          cmd.save(outPath)
+        } catch (e) { reject(e) }
+      })
+    }
+
+    // Upload or stream
+    const hasS3 = Boolean(process.env.S3_BUCKET && process.env.AWS_REGION && (process.env.AWS_ACCESS_KEY_ID || process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI))
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || ''
+    const key = `uploads/youtube/${Date.now()}-${crypto.randomUUID()}.mp4`
+
+    if (blobToken){
+      try {
+        const { put } = await import('@vercel/blob')
+        const body = fs.readFileSync(outPath)
+        const up = await put(key, body, { access: 'public', contentType: 'video/mp4', token: blobToken })
+        try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+        return res.json({ url: up.url, key, title, length_seconds })
+      } catch (e) {
+        console.warn('Blob upload failed, falling back:', e?.message || e)
+      }
+    }
+
+    if (hasS3){
+      const bucket = process.env.S3_BUCKET
+      const body = fs.readFileSync(outPath)
+      await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'video/mp4', ACL: 'public-read' }))
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      const url = `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
+      return res.json({ url, key, title, length_seconds })
+    }
+
+    // Stream file if no storage configured
+    const stat = fs.statSync(outPath)
+    res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': String(stat.size), 'Cache-Control': 'no-store' })
+    const rs = fs.createReadStream(outPath)
+    rs.pipe(res)
+    rs.on('close', () => { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {} })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e?.message || 'download_youtube failed' })
+  }
+})
+
 app.post('/render_batch', async (req, res) => {
   try {
     const required = process.env.SHARED_SECRET
