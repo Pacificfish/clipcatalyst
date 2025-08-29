@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Nav() {
   const [session, setSession] = useState<any>(null);
@@ -47,6 +47,20 @@ export default function Nav() {
   }
 
   async function logout() { await supabase.auth.signOut(); }
+
+  async function openBilling(){
+    try {
+      if (!token) return alert('Please sign in');
+      const r = await fetch('/api/billing/portal', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'x-return-url': typeof window!== 'undefined' ? `${window.location.origin}/profile` : '' } })
+      const j = await r.json()
+      if (!r.ok || !j?.url) throw new Error(j?.error || 'Failed to open billing portal')
+      window.location.assign(j.url)
+    } catch (e: any) {
+      alert(e?.message || 'Failed to open billing portal')
+    }
+  }
+
+  const initials = (email || 'U').slice(0,1).toUpperCase();
 
   async function openBilling(){
     try {

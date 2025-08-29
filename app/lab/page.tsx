@@ -32,10 +32,11 @@ export default function LabPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
   // Source dropdown state
-  const [sourceType, setSourceType] = useState<'paste' | 'upload'>('paste');
+  const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
   const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
-
-  const supabase = getSupabaseClient();
+  const [ytLoading, setYtLoading] = useState(false);
+  const [ytError, setYtError] = useState<string | null>(null);
+  const [ytResultUrl, setYtResultUrl] = useState<string>('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -205,7 +206,9 @@ export default function LabPage() {
     }
   }
 
-  const disabled = isLoading || !source.trim() || !title.trim();
+  // disabled only applies to paste/article generation
+  // YouTube and Upload modes have their own actions
+  const disabled = isLoading || !title.trim() || !source.trim();
 
   return (
     <>
@@ -259,19 +262,23 @@ export default function LabPage() {
                 className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2"
                 value={sourceType}
                 onChange={(e) => {
-                  const v = e.target.value as 'paste' | 'upload'
+                  const v = e.target.value as 'paste' | 'article' | 'youtube' | 'upload'
                   setSourceType(v)
+                  // Map to generation mode where applicable
                   if (v === 'paste') setMode('Paste')
+                  if (v === 'article') setMode('URL')
                 }}
               >
                 <option value="paste">Paste text</option>
-                <option value="upload">Autoclipper</option>
+                <option value="article">Article URL</option>
+                <option value="youtube">YouTube URL</option>
+                <option value="upload">Upload video</option>
               </select>
             </label>
           </div>
 
-          {/* Title, Source input, Options, and Actions are hidden in Autoclipper mode */}
-          {sourceType !== 'upload' && (
+          {/* Title, Source input, Options, and Actions are hidden in Upload/YouTube modes */}
+          {sourceType === 'paste' || sourceType === 'article' ? (
             <>
               {/* Title */}
               <div>
@@ -285,7 +292,9 @@ export default function LabPage() {
               <div>
                 {sourceType === 'paste' ? (
                   <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-                ) : null}
+                ) : (
+                  <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e)=> setSource(e.target.value)} />
+                )}
               </div>
 
               {/* Options */}
@@ -311,7 +320,7 @@ export default function LabPage() {
                   TikTok style preset
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
+                  <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
                   Auto b‑roll
                 </label>
                 <label className="flex flex-col gap-1 sm:col-span-1">
@@ -330,13 +339,12 @@ export default function LabPage() {
 
               {/* Generate */}
               <div className="mt-2 flex items-center gap-3">
-                <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <button onClick={handleGenerate} disabled={(isLoading || !title.trim() || !source.trim())} className={`btn-primary ${(isLoading || !title.trim() || !source.trim()) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   {isLoading ? 'Generating…' : 'Generate'}
                 </button>
                 <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
                 {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
               </div>
-
 
               {/* Error */}
               {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
@@ -366,12 +374,44 @@ export default function LabPage() {
               {/* Previous projects grid */}
               <ProjectsGrid token={session?.access_token} />
             </>
-          )}
+          ) : null}
+
+          {/* YouTube mode */}
+          {sourceType === 'youtube' && (
+            <div className="space-y-3">
+              <div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Paste a YouTube link to download</span>
+                  <div className="flex gap-2 items-center">
+                    <input type="url" className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={ytUrl} onChange={(e)=> setYtUrl(e.target.value)} />
+                    <button
+                      className="btn"
+                      onClick={async ()=>{
+                        try {
+                          setYtLoading(true); setYtError(null); setYtResultUrl('')
+                          const r = await fetch('/api/download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
+                          const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
+                          if (!j?.url) throw new Error('Unexpected response')
+                          setYtResultUrl(String(j.url))
+                          setInitialUploadUrl(String(j.url))
+                          // Switch to upload to continue with Autoclipper
+                          setSourceType('upload')
+                        } catch (e: any) { setYtError(e?.message || 'Failed') } finally { setYtLoading(false) }
+                      }}
+                      disabled={ytLoading || !ytUrl.trim()}
+                    >{ytLoading ? 'Downloading…' : 'Download'}</button>
+                  </div>
+                </label>
+                {ytError && <div className="mt-2 text-xs text-rose-300">{ytError}</div>}
+                {ytResultUrl && (
+                  <div className="mt-2 text-xs text-white/70">Downloaded • <a className="underline" href={ytResultUrl} target="_blank" rel="noreferrer">Open file</a></div>
+                )}
+              </div>
 
           {/* Upload (Autoclipper inline) */}
           {sourceType === 'upload' && (
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
-              <AutoclipperSimple />
+              <AutoclipperSimple initialUrl={initialUploadUrl} />
             </div>
           )}
         </div>
@@ -383,11 +423,11 @@ export default function LabPage() {
 }
 
 
-function AutoclipperSimple() {
+function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState<string>('')
-  const [uploadedUrl, setUploadedUrl] = useState<string>('')
+  const [uploadedUrl, setUploadedUrl] = useState<string>(initialUrl || '')
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -425,57 +465,25 @@ function AutoclipperSimple() {
       <div>
         <label className="flex flex-col gap-1">
           <span className="text-xs text-white/60">Upload a video (mp4/mov/webm)</span>
-          <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e)=>{ const f = e.target.files?.[0] || null; setFile(f); setUploadedUrl(''); setProgress(0); setStatus(''); if (f) void onFileChange(f) }} />
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            disabled={Boolean(uploadedUrl)}
+            onChange={(e)=>{ const f = e.target.files?.[0] || null; setFile(f); setUploadedUrl(''); setProgress(0); setStatus(''); if (f) void onFileChange(f) }} />
         </label>
         {(status || uploadedUrl) && (
           <div className="mt-2 text-xs text-white/70">
-            {status} {uploadedUrl && (<><span className="mx-1">•</span><a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">Open uploaded file</a></>)}
+            {uploadedUrl ? (
+              <>Using uploaded URL • <a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">Open file</a></>
+            ) : status}
           </div>
         )}
         {error && <div className="mt-2 rounded-lg border border-rose-400/40 bg-rose-500/10 p-2 text-xs text-rose-200">{error}</div>}
       </div>
-
-      {/* Paste YouTube URL to download */}
-      <div className="space-y-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Or paste a YouTube link to download</span>
-          <YouTubeMini />
-        </label>
-      </div>
     </div>
   )
 }
 
-
-function YouTubeMini(){
-  const [url, setUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [result, setResult] = useState<{ url: string; key?: string } | null>(null)
-
-  async function onDownload(){
-    try {
-      setLoading(true); setErr(null); setResult(null)
-      const r = await fetch('/api/download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: url.trim() }) })
-      const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
-      if (!j?.url) throw new Error('Unexpected response')
-      setResult(j)
-    } catch (e: any) { setErr(e?.message || 'Failed') } finally { setLoading(false) }
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2 items-center">
-        <input type="url" className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={url} onChange={e=>setUrl(e.target.value)} />
-        <button className="btn" onClick={onDownload} disabled={loading || !url.trim()}>{loading ? 'Downloading…' : 'Download'}</button>
-      </div>
-      {err && <div className="text-xs text-rose-300">{err}</div>}
-      {result?.url && (
-        <div className="text-xs text-white/70">Done • <a className="underline" href={result.url} target="_blank" rel="noreferrer">Open file</a></div>
-      )}
-    </div>
-  )
-}
 
 function ProjectsGrid({ token }: { token?: string }) {
   const [items, setItems] = useState<Array<{ id: string; title: string; mp3_url: string; csv_url: string; thumb_url: string | null; updated_at: string | null }>>([]);
