@@ -766,7 +766,24 @@ app.post('/suggest_highlights', async (req, res) => {
 app.post('/download_youtube', async (req, res) => {
   try {
     const required = process.env.SHARED_SECRET
-    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+    const token = req.query && (req.query.token || req.query.t)
+    const ts = req.query && (req.query.ts || req.query.time)
+    let ok = false
+    if (required){
+      if (req.header('x-shared-secret') === required) ok = true
+      else if (token && ts){
+        try {
+          const now = Math.floor(Date.now()/1000)
+          const tnum = parseInt(String(ts),10)
+          if (Math.abs(now - tnum) < 600){
+            const cryptoNode = await import('crypto')
+            const h = cryptoNode.createHmac('sha256', required).update(String(ts)).digest('hex')
+            if (h === token) ok = true
+          }
+        } catch {}
+      }
+      if (!ok) return res.status(403).json({ error: 'forbidden' })
+    }
 
     const youtube_url = String((req.body && req.body.youtube_url) || '').trim()
     if (!youtube_url) return res.status(400).json({ error: 'youtube_url is required' })
