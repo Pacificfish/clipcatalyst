@@ -353,9 +353,64 @@ export default function LabPage() {
           <h2 className="text-lg font-semibold">Autoclipper (upload video)</h2>
           <Autoclipper />
         </div>
+
+        {/* Download from YouTube: paste link and upload to Blob */}
+        <div className="card p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Download from YouTube</h2>
+          <YouTubeDownloader />
+        </div>
       </main>
     </>
   );
+}
+
+function YouTubeDownloader() {
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<{ url: string; key?: string; title?: string } | null>(null)
+
+  async function onDownload() {
+    try {
+      setLoading(true)
+      setError(null)
+      setResult(null)
+      const r = await fetch('/api/download_youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtube_url: url.trim() })
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
+      if (!j?.url) throw new Error('Unexpected response')
+      setResult(j)
+    } catch (e: any) {
+      setError(e?.message || 'Failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-white/60">YouTube link</span>
+        <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://www.youtube.com/watch?v=..." value={url} onChange={(e)=>setUrl(e.target.value)} />
+      </label>
+      <div className="flex items-center gap-3">
+        <button className="btn-primary" onClick={onDownload} disabled={loading || !url.trim()}>
+          {loading ? 'Downloading…' : 'Download'}
+        </button>
+        {error && <span className="text-xs text-rose-300">{error}</span>}
+      </div>
+      {result?.url && (
+        <div className="text-sm">
+          <div className="text-white/70">Uploaded to:</div>
+          <a className="btn" href={result.url} target="_blank" rel="noreferrer">{result.url}</a>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function Autoclipper() {

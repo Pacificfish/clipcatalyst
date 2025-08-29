@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
-    "@vercel/blob": "^0.23.3",
+    "@vercel/blob": "^0.23.4",
     "autoprefixer": "^10.4.21",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
