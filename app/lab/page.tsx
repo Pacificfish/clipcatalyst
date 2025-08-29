@@ -32,9 +32,8 @@ export default function LabPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
   // Source dropdown state
-  const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
+  const [sourceType, setSourceType] = useState<'paste' | 'upload'>('paste');
   const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
-  const [ytLastUrl, setYtLastUrl] = useState<string>('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -258,17 +257,13 @@ export default function LabPage() {
                 className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2"
                 value={sourceType}
                 onChange={(e) => {
-                  const v = e.target.value as 'paste' | 'article' | 'youtube' | 'upload'
+                  const v = e.target.value as 'paste' | 'upload'
                   setSourceType(v)
-                  // Keep legacy mode in sync for generate flow
                   if (v === 'paste') setMode('Paste')
-                  if (v === 'article') setMode('URL')
                 }}
               >
                 <option value="paste">Paste text</option>
-                <option value="article">Article URL</option>
-                <option value="youtube">YouTube URL</option>
-                <option value="upload">Upload video</option>
+                <option value="upload">Autoclipper</option>
               </select>
             </label>
           </div>
@@ -285,17 +280,8 @@ export default function LabPage() {
           <div>
             {sourceType === 'paste' ? (
               <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            ) : sourceType === 'article' ? (
-              <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e) => setSource(e.target.value)} />
             ) : null}
           </div>
-
-          {/* YouTube downloader (inline) */}
-          {sourceType === 'youtube' && (
-            <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
-              <YouTubeDownloader onDone={(u)=>{ setYtLastUrl(u); setInitialUploadUrl(u); setSourceType('upload'); }} />
-            </div>
-          )}
 
           {/* Upload (Autoclipper inline) */}
           {sourceType === 'upload' && (
@@ -389,59 +375,6 @@ export default function LabPage() {
   );
 }
 
-function YouTubeDownloader({ onDone }: { onDone?: (url: string) => void }) {
-  const [url, setUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ url: string; key?: string; title?: string } | null>(null)
-
-  async function onDownload() {
-    try {
-      setLoading(true)
-      setError(null)
-      setResult(null)
-      const r = await fetch('/api/download_youtube', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtube_url: url.trim() })
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
-      if (!j?.url) throw new Error('Unexpected response')
-      setResult(j)
-    } catch (e: any) {
-      setError(e?.message || 'Failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-white/60">YouTube link</span>
-        <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://www.youtube.com/watch?v=..." value={url} onChange={(e)=>setUrl(e.target.value)} />
-      </label>
-      <div className="flex items-center gap-3">
-        <button className="btn-primary" onClick={onDownload} disabled={loading || !url.trim()}>
-          {loading ? 'Downloading…' : 'Download'}
-        </button>
-        {error && <span className="text-xs text-rose-300">{error}</span>}
-      </div>
-      {result?.url && (
-        <div className="space-y-2 text-sm">
-          <div className="text-white/70">Uploaded to:</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <a className="btn" href={result.url} target="_blank" rel="noreferrer">Open file</a>
-            {onDone && (
-              <button className="btn" onClick={() => onDone(result.url!)}>Use in Autoclipper</button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function Autoclipper({ initialUrl }: { initialUrl?: string }) {
   const [file, setFile] = useState<File | null>(null)
