@@ -44,7 +44,6 @@ export default function LabPage() {
   // Source dropdown state
   const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
   const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
-  const [ytUrl, setYtUrl] = useState<string>('');
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [ytResultUrl, setYtResultUrl] = useState<string>('');
@@ -332,7 +331,7 @@ const res = await fetch('/api/worker/proxy', {
                   TikTok style preset
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
+                  <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
                   Auto b‑roll
                 </label>
                 <label className="flex flex-col gap-1 sm:col-span-1">
