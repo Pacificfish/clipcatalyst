@@ -34,10 +34,12 @@ export default function LabPage() {
   // Source dropdown state
   const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
   const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
+  const [ytUrl, setYtUrl] = useState('');
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [ytResultUrl, setYtResultUrl] = useState<string>('');
 
+  const supabase = getSupabaseClient();
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -320,7 +322,7 @@ export default function LabPage() {
                   TikTok style preset
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
+                  <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
                   Auto b‑roll
                 </label>
                 <label className="flex flex-col gap-1 sm:col-span-1">
@@ -407,6 +409,8 @@ export default function LabPage() {
                   <div className="mt-2 text-xs text-white/70">Downloaded • <a className="underline" href={ytResultUrl} target="_blank" rel="noreferrer">Open file</a></div>
                 )}
               </div>
+            </div>
+          )}
 
           {/* Upload (Autoclipper inline) */}
           {sourceType === 'upload' && (
