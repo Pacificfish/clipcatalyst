@@ -4,8 +4,10 @@ import { Inter } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://clipcatalyst.net').replace(/\/$/, '')
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://clipcatalyst.app'),
+  metadataBase: new URL(siteUrl),
   title: 'ClipCatalyst – Turn ideas into viral shorts in minutes',
   description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
   keywords: ['shorts generator','ai video','tiktok','reels','youtube shorts','captions','voiceover','elevenlabs'],
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ClipCatalyst – Viral shorts in minutes',
     description: 'Generate 30–60s scripts, voiceovers, and bold captions in one click.',
-    url: 'https://clipcatalyst.app',
+    url: siteUrl,
     siteName: 'ClipCatalyst',
     images: [{ url: '/og.svg', width: 1200, height: 630 }],
     locale: 'en_US',
@@ -45,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     applicationCategory: 'MultimediaApplication',
     operatingSystem: 'Web',
     description: 'Generate 30–60s scripts, voiceovers, and bold captions for short-form video.',
-    url: 'https://clipcatalyst.app',
+    url: siteUrl,
   }
 
   return (

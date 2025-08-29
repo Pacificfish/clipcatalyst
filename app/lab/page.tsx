@@ -36,12 +36,26 @@ export default function LabPage() {
   const [autoBusy, setAutoBusy] = useState(false);
   const [autoErr, setAutoErr] = useState<string | null>(null);
   const [autoSegments, setAutoSegments] = useState<Array<{ start: number; end: number; text: string }>>([]);
+  const [autoAttempts, setAutoAttempts] = useState<Array<{ url: string; ok: boolean; status?: number; bytes?: number; error?: string }>>([]);
   const [musicUrl, setMusicUrl] = useState('');
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
+  // Batch render state for Autoclipper
+  const [batchBusy, setBatchBusy] = useState(false)
+  const [batchErr, setBatchErr] = useState<string | null>(null)
+  const [batchClips, setBatchClips] = useState<Array<{ url: string; key?: string; start_ms: number; end_ms: number; seconds: number; title?: string | null }>>([])
   // Unified mode/preset selector
   const [view, setView] = useState<'Paste' | 'Autoclipper'>('Paste');
+  // Debug: which API base is being used
+  const [apiBase, setApiBase] = useState('')
+  useEffect(() => {
+    try {
+      const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
+      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || defaultOrigin).replace(/\/$/, '')
+      setApiBase(base)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -219,8 +233,12 @@ const res = await fetch('/api/worker/proxy', {
     setAutoBusy(true);
     setAutoErr(null);
     setAutoSegments([]);
+    setAutoAttempts([]);
     try {
-      const res = await fetch('/api/presets/autoclip', {
+      const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
+      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || apiBase || defaultOrigin).replace(/\/$/, '')
+      const endpoint = `${base}/api/presets/autoclip?ts=${Date.now()}&src=lab`
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -229,8 +247,12 @@ const res = await fetch('/api/worker/proxy', {
         body: JSON.stringify({ youtube_url: ytUrl.trim(), max_clips: autoNumClips, target_seconds: autoClipSec, language: autoLang }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Autoclip failed');
+      if (!res.ok){
+        if (Array.isArray(data?.attempts)) setAutoAttempts(data.attempts)
+        throw new Error(data?.error || 'Autoclip failed')
+      }
       setAutoSegments(Array.isArray(data?.segments) ? data.segments : []);
+      setAutoAttempts([]);
     } catch (e: any) {
       setAutoErr(e?.message || 'Autoclip failed');
     } finally {
@@ -421,15 +443,76 @@ const res = await fetch('/api/worker/proxy', {
                   <button onClick={runAutoclipper} disabled={autoBusy || !ytUrl.trim()} className={`btn-primary ${autoBusy || !ytUrl.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>{autoBusy ? 'Analyzing…' : 'Suggest Highlights'}</button>
                   {autoErr && <span className="text-xs text-rose-300">{autoErr}</span>}
                 </div>
-                {autoSegments.length>0 && (
+                <div className="text-[10px] text-white/40">API endpoint: {apiBase ? `${apiBase}/api/presets/autoclip` : '/api/presets/autoclip'}</div>
+                {autoErr && autoAttempts.length>0 && (
                   <div className="mt-3 space-y-2">
+                    <div className="text-xs text-amber-300">Debug (last attempts)</div>
+                    <ul className="text-[11px] text-white/70 space-y-1 max-h-40 overflow-auto rounded bg-white/5 ring-1 ring-white/10 p-2">
+                      {autoAttempts.slice(-12).map((a,i)=> (
+                        <li key={i} className="font-mono break-all">
+                          <span className={a.ok ? 'text-emerald-300' : 'text-rose-300'}>{a.ok ? 'OK' : 'ERR'}</span>
+                          {typeof a.status==='number' ? ` ${a.status}` : ''} – {a.url}
+                          {a.error ? ` – ${a.error}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="text-[10px] text-white/50">Tip: set ASSEMBLYAI_API_KEY, RENDER_WORKER_URL and SHARED_SECRET/RENDER_WORKER_SECRET. You can also test /api/diagnostics/worker.</div>
+                  </div>
+                )}
+
+                {autoSegments.length>0 && (
+                  <div className="mt-3 space-y-3">
                     <div className="text-xs text-white/60">Suggested segments</div>
                     <ul className="text-sm list-disc pl-5 space-y-1">
                       {autoSegments.map((s,i)=> (
                         <li key={i}><span className="font-mono">{msToHMS(s.start)} → {msToHMS(s.end)}</span> – {s.text?.slice(0,100)}</li>
                       ))}
                     </ul>
-                    <div className="text-xs text-white/50">Note: Rendering of these clips into MP4s can be wired next. For now, use the timestamps to guide manual clipping or let me know to auto-render via the worker.</div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className={`btn-primary ${batchBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        disabled={batchBusy}
+                        onClick={async ()=>{
+                          setBatchBusy(true); setBatchErr(null); setBatchClips([])
+                          try {
+                            const body = {
+                              youtube_url: ytUrl.trim(),
+                              segments: autoSegments.slice(0,3).map(s=>({ start_ms: s.start, end_ms: s.end, text: s.text })),
+                              preset: 'tiktok_v1'
+                            }
+                            const res = await fetch('/api/worker/proxy?path=render_batch', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(body)
+                            })
+                            const data = await res.json().catch(()=>({}))
+                            if (!res.ok) throw new Error(data?.error || `Batch render failed: ${res.status}`)
+                            const clips = Array.isArray(data?.clips) ? data.clips : []
+                            setBatchClips(clips)
+                          } catch (e: any) {
+                            setBatchErr(e?.message || 'Batch render failed')
+                          } finally {
+                            setBatchBusy(false)
+                          }
+                        }}
+                      >
+                        {batchBusy ? 'Rendering 3 TikTok clips…' : 'Render 3 TikTok clips'}
+                      </button>
+                      {batchErr && <span className="text-xs text-rose-300">{batchErr}</span>}
+                    </div>
+                    {batchClips.length>0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-white/60">Download clips</div>
+                        <ol className="list-decimal pl-5 space-y-1 text-sm">
+                          {batchClips.map((c,i)=> (
+                            <li key={i}>
+                              <a className="link" href={c.url} target="_blank">Clip {i+1} ({Math.max(1,c.seconds)}s) – download MP4</a>
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="text-[10px] text-white/50">Tip: Outputs are 1080x1920 H.264/AAC MP4 with on-screen word captions, ready for TikTok.</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -595,9 +678,14 @@ function ProjectsGrid({ token, refresh }: { token?: string, refresh?: number }) 
             <div key={p.id} className="rounded-xl ring-1 ring-white/10 p-3 bg-white/5 space-y-2">
               <div className="aspect-video w-full overflow-hidden rounded-md ring-1 ring-white/10 bg-white/5">
                 {p.thumb_url ? (
-                  <img src={p.thumb_url} alt="thumbnail" className="w-full h-full object-cover" />
+                  <img
+                    src={p.thumb_url}
+                    alt="thumbnail"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { try { (e.currentTarget as HTMLImageElement).src = '/thumb.svg' } catch {} }}
+                  />
                 ) : (
-                  <div className="w-full h-full grid place-items-center text-xs text-white/50">No thumbnail</div>
+                  <img src="/thumb.svg" alt="thumbnail" className="w-full h-full object-cover" />
                 )}
               </div>
               <div className="text-sm font-semibold truncate" title={p.title}>{p.title}</div>

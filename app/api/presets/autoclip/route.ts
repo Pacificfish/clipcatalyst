@@ -280,6 +280,89 @@ async function fetchTranscript(videoId: string, preferredLang: string | undefine
   return []
 }
 
+async function transcribeWithAssemblyAI(youtubeUrl: string, preferredLang: string | undefined, attempts: Attempt[]): Promise<Array<{ start: number; dur: number; text: string }>> {
+  const API = process.env.ASSEMBLYAI_API_KEY || ''
+  if (!API) return []
+  try {
+    const createRes = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: { 'Authorization': API, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio_url: youtubeUrl,
+        language_code: preferredLang && preferredLang.length >= 2 ? preferredLang : undefined,
+        punctuate: true,
+        auto_highlights: false,
+        speaker_labels: false,
+        filter_profanity: false,
+      })
+    })
+    const created: any = await createRes.json().catch(()=>null)
+    attempts.push({ url: 'assemblyai:create', ok: createRes.ok, status: createRes.status })
+    if (!createRes.ok || !created?.id) return []
+    const id = created.id
+    const started = Date.now()
+    while (Date.now() - started < 120000) { // up to 2 minutes
+      await new Promise(r=>setTimeout(r, 3000))
+      const st = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, { headers: { 'Authorization': API } })
+      attempts.push({ url: `assemblyai:status:${id}`, ok: st.ok, status: st.status })
+      if (!st.ok) continue
+      const js: any = await st.json().catch(()=>null)
+      if (js?.status === 'completed'){
+        const words: any[] = Array.isArray(js.words) ? js.words : []
+        if (words.length){
+          // Group words into ~3s lines or until punctuation
+          const out: Array<{ start: number; dur: number; text: string }> = []
+          let curStart = Math.max(0, Math.floor(Number(words[0].start||0)))
+          let curEnd = curStart
+          let buf = ''
+          for (const w of words){
+            const ws = Math.max(0, Math.floor(Number(w.start||0)))
+            const we = Math.max(ws+1, Math.floor(Number(w.end||ws+1)))
+            const t = String(w.text||w.word||'').trim()
+            if (!t) continue
+            // Flush if line gets too long in time or punctuation triggers a boundary
+            const tooLong = (we - curStart) > 3500
+            const punct = /[.!?]$/.test(t)
+            if (tooLong || punct){
+              const lineText = (buf ? buf + ' ' : '') + t
+              curEnd = we
+              out.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: lineText.trim() })
+              // reset
+              curStart = we
+              curEnd = we
+              buf = ''
+            } else {
+              buf = buf ? (buf + ' ' + t) : t
+              curEnd = we
+            }
+          }
+          if (buf){
+            out.push({ start: curStart, dur: Math.max(1, curEnd - curStart), text: buf.trim() })
+          }
+          return out
+        }
+        // No words array; fallback to text with utterances
+        const text = String(js.text||'').trim()
+        if (text){
+          const chunks = text.split(/(?<=[.!?])\s+/)
+          const approxDur = 1500
+          let t0 = 0
+          return chunks.filter(Boolean).map((s: string)=>{ const st = t0; t0 += approxDur; return { start: st, dur: approxDur, text: s } })
+        }
+        return []
+      }
+      if (js?.status === 'error'){
+        attempts.push({ url: `assemblyai:error:${id}`, ok: false, error: String(js?.error || 'transcription failed') })
+        return []
+      }
+    }
+    attempts.push({ url: `assemblyai:timeout:${id}`, ok: false, error: 'timeout' })
+  } catch (e: any) {
+    attempts.push({ url: 'assemblyai', ok: false, error: String(e?.message || e) })
+  }
+  return []
+}
+
 function scoreSegments(lines: Array<{ start: number; dur: number; text: string }>, windowMs: number): Array<{ start: number; end: number; text: string; score: number }>{
   const out: Array<{ start: number; end: number; text: string; score: number }> = []
   if (!lines.length) return out
@@ -310,14 +393,44 @@ function scoreSegments(lines: Array<{ start: number; dur: number; text: string }
   return out
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+}
+
+export async function OPTIONS() {
+  // Handle CORS preflight gracefully in all environments (no body for 204)
+  return new Response(null, { status: 204, headers: corsHeaders })
+}
+
+export async function HEAD() {
+  // Health/HEAD check without noise
+  return new Response(null, { status: 204, headers: corsHeaders })
+}
+
+export async function GET() {
+  // Return a friendly message instead of 405 to avoid console noise from bots/prefetchers
+  return NextResponse.json({ ok: true, message: 'Use POST to suggest highlights. This endpoint is healthy.' }, { status: 200, headers: corsHeaders })
+}
+
 export async function POST(req: Request){
   try {
-    const headers = { 'Access-Control-Allow-Origin': '*' }
+    const headers = corsHeaders
+
+    // Gracefully no-op if body is missing (e.g., speculative prefetch)
+    const ctype = String(req.headers.get('content-type') || '').toLowerCase()
+    let body: Payload | null = null
+    if (ctype.includes('application/json')){
+      try { body = await req.json() } catch { body = null }
+    }
+    if (!body || !body.youtube_url){
+      return new Response(null, { status: 204, headers })
+    }
 
     const authHeader = req.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
 
-    const body = (await req.json()) as Payload
     const videoId = parseYouTubeId(String(body.youtube_url || ''))
     if (!videoId) return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400, headers })
 
@@ -327,7 +440,39 @@ export async function POST(req: Request){
 
     const preferredLang = (String(body.language || '').trim()) || undefined
     const attempts: Attempt[] = []
-    const lines = await fetchTranscript(videoId, preferredLang, attempts)
+    let lines = await fetchTranscript(videoId, preferredLang, attempts)
+    if (!lines.length){
+      // Fallback A: try AssemblyAI with page URL
+      const fullUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+      const fallbackA = await transcribeWithAssemblyAI(fullUrl, preferredLang, attempts)
+      if (fallbackA.length) lines = fallbackA
+    }
+    if (!lines.length){
+      // Fallback B: call worker to download audio and upload to AssemblyAI
+      try {
+        const WORKER = (process.env.RENDER_WORKER_URL || '').replace(/\/$/, '')
+        const SECRET = process.env.RENDER_WORKER_SECRET || process.env.SHARED_SECRET || ''
+        if (WORKER){
+          const wr = await fetch(`${WORKER}/transcribe_assembly`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(SECRET ? { 'x-shared-secret': SECRET } : {}) },
+            body: JSON.stringify({ youtube_url: `https://www.youtube.com/watch?v=${videoId}`, language: preferredLang })
+          })
+          attempts.push({ url: `${WORKER}/transcribe_assembly`, ok: wr.ok, status: wr.status })
+          if (wr.ok){
+            const j: any = await wr.json().catch(()=>null)
+            const arr: any[] = Array.isArray(j?.lines) ? j.lines : []
+            if (arr.length){
+              lines = arr.map(v => ({ start: Math.max(0, Math.floor(Number(v.start||0))), dur: Math.max(1, Math.floor(Number(v.dur||0))), text: String(v.text||'').trim() })).filter(x => x.text)
+            }
+          } else {
+            try { attempts.push({ url: 'worker:transcribe_assembly:error', ok: false, status: wr.status, error: await wr.text() }) } catch {}
+          }
+        }
+      } catch (e: any) {
+        attempts.push({ url: 'worker:transcribe_assembly', ok: false, error: String(e?.message || e) })
+      }
+    }
     if (!lines.length) return NextResponse.json({ error: 'Transcript not available for this video', attempts }, { status: 404, headers })
 
     const scored = scoreSegments(lines, windowMs)

@@ -43,7 +43,7 @@ const supabaseAdmin = getSupabaseAdmin()
       return NextResponse.json({ error: 'No Stripe customer found for this email' }, { status: 404, headers })
     }
 
-    const returnUrl = req.headers.get('x-return-url') || `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/profile`
+const returnUrl = req.headers.get('x-return-url') || `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://clipcatalyst.net').replace(/\/$/,'')}/profile`
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customer.id,
