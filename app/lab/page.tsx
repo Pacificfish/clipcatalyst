@@ -391,7 +391,7 @@ export default function LabPage() {
                       onClick={async ()=>{
                         try {
                           setYtLoading(true); setYtError(null); setYtResultUrl('')
-                          const r = await fetch('/api/download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
+                          const r = await fetch('/api/worker/proxy?path=download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
                           const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
                           if (!j?.url) throw new Error('Unexpected response')
                           setYtResultUrl(String(j.url))
