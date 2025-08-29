@@ -22,6 +22,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 OPENAI_API_KEY=your_openai_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ELEVENLABS_VOICE_ID=wBXNqKUATyqu0RtYt25i
+
+# Vercel Blob (uploads)
+# Enable Blob in Vercel → Project → Storage → Blob
+# No client credentials needed for uploads via /api/blob/upload
+
+# External render worker
+RENDER_WORKER_URL=https://your-worker.fly.dev
+RENDER_WORKER_SECRET=your-shared-secret
 ```
 
 3) Supabase Storage:

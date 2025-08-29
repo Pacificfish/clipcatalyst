@@ -1,16 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Nav() {
   const [session, setSession] = useState<any>(null);
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => (typeof document !== 'undefined' ? ((document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'dark') : 'dark'));
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const email = session?.user?.email ?? '';
-  const plan = String(session?.user?.user_metadata?.plan || 'Free');
-  const isPaid = plan.toLowerCase() !== 'free';
+  const token = session?.access_token || '';
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -20,24 +18,16 @@ export default function Nav() {
   }, []);
 
   useEffect(() => {
-    function onDocClick(e: MouseEvent) {
+    function onDocClick(e: MouseEvent){
       if (!menuRef.current) return;
-      if (open && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (menuRef.current.contains(e.target as Node)) return;
+      setOpen(false);
     }
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
-    document.addEventListener('mousedown', onDocClick);
+    function onKey(e: KeyboardEvent){ if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('click', onDocClick);
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  // Keep local theme state in sync if changed elsewhere
-  useEffect(() => {
-    const t = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null
-    if (t && t !== theme) setTheme(t)
-  }, [theme])
+    return () => { document.removeEventListener('click', onDocClick); document.removeEventListener('keydown', onKey) }
+  }, []);
 
   async function login() {
     const e = prompt('Enter your email for a magic link:');
@@ -88,53 +78,53 @@ export default function Nav() {
 
   const initial = email ? email.charAt(0).toUpperCase() : '';
 
+  async function openBilling(){
+    try {
+      if (!token) return alert('Please sign in');
+      const r = await fetch('/api/billing/portal', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'x-return-url': typeof window!== 'undefined' ? `${window.location.origin}/profile` : '' } })
+      const j = await r.json()
+      if (!r.ok || !j?.url) throw new Error(j?.error || 'Failed to open billing portal')
+      window.location.assign(j.url)
+    } catch (e: any) {
+      alert(e?.message || 'Failed to open billing portal')
+    }
+  }
+
+  const initials = (email || 'U').slice(0,1).toUpperCase();
+
   return (
     <header className="header-frost">
       <div className="container py-3 flex items-center gap-4">
         <Link href="/" className="font-semibold">ClipCatalyst</Link>
         <nav className="ml-auto flex items-center gap-2">
-          <button aria-label="Toggle theme" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} onClick={toggleTheme} className="btn">
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+          <Link href="/lab" className="btn">Lab</Link>
           {!session ? (
             <div className="flex items-center gap-2">
               <button onClick={loginWithGoogle} className="btn">Sign in with Google</button>
               <button onClick={login} className="btn">Email link</button>
             </div>
           ) : (
-            <div className="relative flex items-center" ref={menuRef}>
+            <div className="relative" ref={menuRef}>
               <button
-                onClick={() => setOpen((v) => !v)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/90 hover:bg-white/20 backdrop-blur-md"
-                aria-label="Open profile menu"
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1 ring-white/10 bg-white/5 hover:bg-white/10 transition"
+                onClick={() => setOpen((v)=>!v)}
+                aria-haspopup="menu"
                 aria-expanded={open}
               >
-                <span className="text-sm font-medium">{initial || '•'}</span>
-              </button>
-              <button
-                onClick={() => setOpen(v => !v)}
-                aria-label="Toggle profile menu"
-                className="ml-1 inline-flex h-9 items-center justify-center px-2 rounded-md text-white/80 hover:text-white"
-              >
-                ▾
+                <span className="grid place-items-center h-7 w-7 rounded-full bg-[var(--brand)] text-black text-xs font-bold">{initials}</span>
+                <span className="hidden md:inline text-xs text-white/80">{email || 'Account'}</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={`transition ${open ? 'rotate-180' : ''}`}><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
               {open && (
-                <div className="absolute right-0 top-full mt-2 z-[999] w-56 rounded-2xl bg-[rgba(10,15,31,0.9)] text-white ring-1 ring-white/10 backdrop-blur-md shadow-xl p-1">
-                  <div className="px-3 py-2 text-xs text-white/70">Signed in as {email}</div>
-                  <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
-                    Profile
+                <div role="menu" className="absolute right-0 mt-2 w-48 rounded-xl bg-white/5 ring-1 ring-white/10 shadow-xl p-1">
+                  <Link role="menuitem" href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm">
+                    <span>Profile</span>
                   </Link>
-                  <Link href="/pricing" className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
-                    Pricing
-                  </Link>
-                  {isPaid && (
-                    <button onClick={openBillingPortal} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
-                      Manage billing
-                    </button>
-                  )}
-                  <div className="h-px my-1 bg-white/10" />
-                  <button onClick={logout} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10">
-                    Sign out
+                  <button role="menuitem" className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm" onClick={openBilling}>
+                    <span>Billing</span>
+                  </button>
+                  <button role="menuitem" className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm" onClick={logout}>
+                    <span>Sign out</span>
                   </button>
                 </div>
               )}

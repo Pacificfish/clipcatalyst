@@ -41,21 +41,13 @@ export default function LabPage() {
   const [useTikTokPreset, setUseTikTokPreset] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [bgUrlManual, setBgUrlManual] = useState('');
-  // Batch render state for Autoclipper
-  const [batchBusy, setBatchBusy] = useState(false)
-  const [batchErr, setBatchErr] = useState<string | null>(null)
-  const [batchClips, setBatchClips] = useState<Array<{ url: string; key?: string; start_ms: number; end_ms: number; seconds: number; title?: string | null }>>([])
-  // Unified mode/preset selector
-  const [view, setView] = useState<'Paste' | 'Autoclipper'>('Paste');
-  // Debug: which API base is being used
-  const [apiBase, setApiBase] = useState('')
-  useEffect(() => {
-    try {
-      const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
-      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || defaultOrigin).replace(/\/$/, '')
-      setApiBase(base)
-    } catch {}
-  }, [])
+  // Source dropdown state
+  const [sourceType, setSourceType] = useState<'paste' | 'article' | 'youtube' | 'upload'>('paste');
+  const [initialUploadUrl, setInitialUploadUrl] = useState<string>('');
+  const [ytUrl, setYtUrl] = useState<string>('');
+  const [ytLoading, setYtLoading] = useState(false);
+  const [ytError, setYtError] = useState<string | null>(null);
+  const [ytResultUrl, setYtResultUrl] = useState<string>('');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -226,39 +218,9 @@ const res = await fetch('/api/worker/proxy', {
     }
   }
 
-  const disabled = isLoading || !title.trim() || (view !== 'Autoclipper' && !source.trim());
-
-  async function runAutoclipper() {
-    if (!session?.access_token) return;
-    setAutoBusy(true);
-    setAutoErr(null);
-    setAutoSegments([]);
-    setAutoAttempts([]);
-    try {
-      const defaultOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : ''
-      const base = (process.env.NEXT_PUBLIC_API_ORIGIN || apiBase || defaultOrigin).replace(/\/$/, '')
-      const endpoint = `${base}/api/presets/autoclip?ts=${Date.now()}&src=lab`
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ youtube_url: ytUrl.trim(), max_clips: autoNumClips, target_seconds: autoClipSec, language: autoLang }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok){
-        if (Array.isArray(data?.attempts)) setAutoAttempts(data.attempts)
-        throw new Error(data?.error || 'Autoclip failed')
-      }
-      setAutoSegments(Array.isArray(data?.segments) ? data.segments : []);
-      setAutoAttempts([]);
-    } catch (e: any) {
-      setAutoErr(e?.message || 'Autoclip failed');
-    } finally {
-      setAutoBusy(false);
-    }
-  }
+  // disabled only applies to paste/article generation
+  // YouTube and Upload modes have their own actions
+  const disabled = isLoading || !title.trim() || !source.trim();
 
   return (
     <>
@@ -304,338 +266,240 @@ const res = await fetch('/api/worker/proxy', {
         </header>
 
         <div className="card p-6 space-y-4">
-          {/* Mode selector dropdown (left) */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-white/60">Mode</span>
+          {/* Source selector */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 sm:col-span-1">
+              <span className="text-xs text-white/60">Source</span>
               <select
-                className="rounded-md bg-white/5 ring-1 ring-white/10 p-1 text-sm"
-                value={view}
+                className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2"
+                value={sourceType}
                 onChange={(e) => {
-                  const v = e.target.value as 'Paste' | 'Autoclipper'
-                  setView(v)
-                  if (v === 'Paste') setMode(v)
+                  const v = e.target.value as 'paste' | 'article' | 'youtube' | 'upload'
+                  setSourceType(v)
+                  // Map to generation mode where applicable
+                  if (v === 'paste') setMode('Paste')
+                  if (v === 'article') setMode('URL')
                 }}
               >
-                <option value="Paste">Paste</option>
-                <option value="Autoclipper">Autoclipper (YouTube)</option>
+                <option value="paste">Paste text</option>
+                <option value="article">Article URL</option>
+                <option value="youtube">YouTube URL</option>
+                <option value="upload">Upload video</option>
               </select>
-            </div>
+            </label>
           </div>
 
-          {/* Title (hide for Autoclipper) */}
-          {view !== 'Autoclipper' && (
-            <div>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-white/60">Project title (required)</span>
-                <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
-              </label>
-            </div>
-          )}
+          {/* Title, Source input, Options, and Actions are hidden in Upload/YouTube modes */}
+          {sourceType === 'paste' || sourceType === 'article' ? (
+            <>
+              {/* Title */}
+              <div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Project title (required)</span>
+                  <input className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="e.g., AI breakthroughs explainer" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </label>
+              </div>
 
-          {/* Source input (shown for Paste) */}
-          <div>
-            {view === 'Paste' && (
-              <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
-            )}
-          </div>
-
-          {/* Options (hide for Autoclipper) */}
-          {view !== 'Autoclipper' && (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-white/60">Language</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-white/60">Tone</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-white/60">Topic (optional)</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
-              </label>
-            </div>
-          )}
-
-          {/* Style preset, b‑roll and music (hide most when Autoclipper) */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            {view !== 'Autoclipper' && (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
-                TikTok style preset
-              </label>
-            )}
-            {view !== 'Autoclipper' && (
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={autoAiBg} onChange={e => setAutoAiBg(e.target.checked)} />
-                Auto AI background image
-              </label>
-            )}
-            {view !== 'Autoclipper' && (
-              <label className="flex flex-col gap-1 sm:col-span-1">
-                <span className="text-xs text-white/60">Background music URL (optional)</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
-              </label>
-            )}
-            {view !== 'Autoclipper' && (
-              <label className="flex flex-col gap-1 sm:col-span-1">
-                <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
-              </label>
-            )}
-            {view !== 'Autoclipper' && (
-              <label className="flex flex-col gap-1 sm:col-span-3">
-                <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
-                <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
-              </label>
-            )}
-          </div>
-
-          {/* Generate (hide for Autoclipper) */}
-          {view !== 'Autoclipper' && (
-            <div className="mt-2 flex items-center gap-3">
-              <button onClick={handleGenerate} disabled={disabled} className={`btn-primary ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                {isLoading ? 'Generating…' : 'Generate'}
-              </button>
-              <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
-              {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
-            </div>
-          )}
-
-          {/* Preset configuration below; only show when Autoclipper is chosen */}
-          {view === 'Autoclipper' && (
-            <div className="mt-8 space-y-4 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-              <div className="space-y-3">
-                <div className="text-sm font-semibold">Autoclipper (YouTube)</div>
-                <p className="text-xs text-white/60">Pick the best {autoNumClips}× ~{autoClipSec}s highlights from a long video. Paste a YouTube URL, we’ll fetch the transcript and suggest timestamps.</p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <label className="flex flex-col gap-1 sm:col-span-2">
-                    <span className="text-xs text-white/60">YouTube URL</span>
-                    <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={ytUrl} onChange={e=>setYtUrl(e.target.value)} />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs text-white/60">Clips</span>
-                    <input type="number" min={1} max={10} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoNumClips} onChange={e=>setAutoNumClips(parseInt(e.target.value || '3',10))} />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs text-white/60">Seconds per clip</span>
-                    <input type="number" min={8} max={90} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoClipSec} onChange={e=>setAutoClipSec(parseInt(e.target.value || '30',10))} />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs text-white/60">Language</span>
-                    <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={autoLang} onChange={e=>setAutoLang(e.target.value)}>
-                      <option value="en">English (en)</option>
-                      <option value="es">Spanish (es)</option>
-                      <option value="fr">French (fr)</option>
-                      <option value="de">German (de)</option>
-                      <option value="pt">Portuguese (pt)</option>
-                      <option value="ru">Russian (ru)</option>
-                      <option value="hi">Hindi (hi)</option>
-                      <option value="ja">Japanese (ja)</option>
-                      <option value="ko">Korean (ko)</option>
-                      <option value="zh-Hans">Chinese Simplified (zh-Hans)</option>
-                      <option value="zh-Hant">Chinese Traditional (zh-Hant)</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <button onClick={runAutoclipper} disabled={autoBusy || !ytUrl.trim()} className={`btn-primary ${autoBusy || !ytUrl.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>{autoBusy ? 'Analyzing…' : 'Suggest Highlights'}</button>
-                  {autoErr && <span className="text-xs text-rose-300">{autoErr}</span>}
-                </div>
-                <div className="text-[10px] text-white/40">API endpoint: {apiBase ? `${apiBase}/api/presets/autoclip` : '/api/presets/autoclip'}</div>
-                {autoErr && autoAttempts.length>0 && (
-                  <div className="mt-3 space-y-2">
-                    <div className="text-xs text-amber-300">Debug (last attempts)</div>
-                    <ul className="text-[11px] text-white/70 space-y-1 max-h-40 overflow-auto rounded bg-white/5 ring-1 ring-white/10 p-2">
-                      {autoAttempts.slice(-12).map((a,i)=> (
-                        <li key={i} className="font-mono break-all">
-                          <span className={a.ok ? 'text-emerald-300' : 'text-rose-300'}>{a.ok ? 'OK' : 'ERR'}</span>
-                          {typeof a.status==='number' ? ` ${a.status}` : ''} – {a.url}
-                          {a.error ? ` – ${a.error}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="text-[10px] text-white/50">Tip: set ASSEMBLYAI_API_KEY, RENDER_WORKER_URL and SHARED_SECRET/RENDER_WORKER_SECRET. You can also test /api/diagnostics/worker.</div>
-                  </div>
+              {/* Source input */}
+              <div>
+                {sourceType === 'paste' ? (
+                  <textarea className="w-full h-36 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="Paste source text here…" value={source} onChange={(e) => setSource(e.target.value)} />
+                ) : (
+                  <input type="url" className="w-full rounded-xl bg-white/5 ring-1 ring-white/10 p-3" placeholder="https://example.com/article" value={source} onChange={(e)=> setSource(e.target.value)} />
                 )}
+              </div>
 
-                {autoSegments.length>0 && (
-                  <div className="mt-3 space-y-3">
-                    <div className="text-xs text-white/60">Suggested segments</div>
-                    <ul className="text-sm list-disc pl-5 space-y-1">
-                      {autoSegments.map((s,i)=> (
-                        <li key={i}><span className="font-mono">{msToHMS(s.start)} → {msToHMS(s.end)}</span> – {s.text?.slice(0,100)}</li>
-                      ))}
-                    </ul>
-                    <div className="flex items-center gap-3">
-                      <button
-                        className={`btn-primary ${batchBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        disabled={batchBusy}
-                        onClick={async ()=>{
-                          setBatchBusy(true); setBatchErr(null); setBatchClips([])
-                          try {
-                            const body = {
-                              youtube_url: ytUrl.trim(),
-                              segments: autoSegments.slice(0,3).map(s=>({ start_ms: s.start, end_ms: s.end, text: s.text })),
-                              preset: 'tiktok_v1'
-                            }
-                            const res = await fetch('/api/worker/proxy?path=render_batch', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify(body)
-                            })
-                            const data = await res.json().catch(()=>({}))
-                            if (!res.ok) throw new Error(data?.error || `Batch render failed: ${res.status}`)
-                            const clips = Array.isArray(data?.clips) ? data.clips : []
-                            setBatchClips(clips)
-                          } catch (e: any) {
-                            setBatchErr(e?.message || 'Batch render failed')
-                          } finally {
-                            setBatchBusy(false)
-                          }
-                        }}
-                      >
-                        {batchBusy ? 'Rendering 3 TikTok clips…' : 'Render 3 TikTok clips'}
-                      </button>
-                      {batchErr && <span className="text-xs text-rose-300">{batchErr}</span>}
-                    </div>
-                    {batchClips.length>0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs text-white/60">Download clips</div>
-                        <ol className="list-decimal pl-5 space-y-1 text-sm">
-                          {batchClips.map((c,i)=> (
-                            <li key={i}>
-                              <a className="link" href={c.url} target="_blank">Clip {i+1} ({Math.max(1,c.seconds)}s) – download MP4</a>
-                            </li>
-                          ))}
-                        </ol>
-                        <div className="text-[10px] text-white/50">Tip: Outputs are 1080x1920 H.264/AAC MP4 with on-screen word captions, ready for TikTok.</div>
+              {/* Options */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Language</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="English" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Tone</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={tone} onChange={(e) => setTone(e.target.value)} placeholder="Informative" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Topic (optional)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g., AI breakthroughs" />
+                </label>
+              </div>
+
+              {/* Style preset, b‑roll and music */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={useTikTokPreset} onChange={e => setUseTikTokPreset(e.target.checked)} />
+                  TikTok style preset
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={autoBroll} onChange={e => setAutoBroll(e.target.checked)} />
+                  Auto b‑roll
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-1">
+                  <span className="text-xs text-white/60">Background music URL (optional)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../music.mp3" value={musicUrl} onChange={e => setMusicUrl(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-1">
+                  <span className="text-xs text-white/60">Watermark logo URL (optional, PNG/SVG)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../logo.png" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-3">
+                  <span className="text-xs text-white/60">Background video URL (optional, overrides auto b‑roll)</span>
+                  <input className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://.../background.mp4" value={bgUrlManual} onChange={e => setBgUrlManual(e.target.value)} />
+                </label>
+              </div>
+
+              {/* Generate */}
+              <div className="mt-2 flex items-center gap-3">
+                <button onClick={handleGenerate} disabled={(isLoading || !title.trim() || !source.trim())} className={`btn-primary ${(isLoading || !title.trim() || !source.trim()) ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  {isLoading ? 'Generating…' : 'Generate'}
+                </button>
+                <span id="credits-inline" className="text-xs text-white/60 ring-1 ring-white/10 rounded-full px-2 py-0.5" />
+                {isLoading && <span className="text-xs text-white/60">This can take ~10–20s…</span>}
+              </div>
+
+              {/* Error */}
+              {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
+
+              {/* Result */}
+              {result && (
+                <div className="pt-4 space-y-3">
+                  {result.mp3_url && (
+                    <div className="space-y-2">
+                      <audio controls src={result.mp3_url} className="w-full" />
+                      <div className="flex gap-2">
+                        <a className="btn" href={result.mp3_url} target="_blank">Download MP3</a>
+                        <button className="btn-primary" onClick={handleRender} disabled={isRendering || !result.csv_url}>
+                          {isRendering ? 'Rendering…' : 'Render Video (MP4)'}
+                        </button>
                       </div>
-                    )}
+                    </div>
+                  )}
+                  {result.csv_url && (
+                    <div>
+                      <a className="btn" href={result.csv_url} target="_blank">Download CSV</a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Previous projects grid */}
+              <ProjectsGrid token={session?.access_token} />
+            </>
+          ) : null}
+
+          {/* YouTube mode */}
+          {sourceType === 'youtube' && (
+            <div className="space-y-3">
+              <div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-white/60">Paste a YouTube link to download</span>
+                  <div className="flex gap-2 items-center">
+                    <input type="url" className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/10 p-2" placeholder="https://www.youtube.com/watch?v=..." value={ytUrl} onChange={(e)=> setYtUrl(e.target.value)} />
+                    <button
+                      className="btn"
+                      onClick={async ()=>{
+                        try {
+                          setYtLoading(true); setYtError(null); setYtResultUrl('')
+                          const r = await fetch('/api/download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
+                          const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
+                          if (!j?.url) throw new Error('Unexpected response')
+                          setYtResultUrl(String(j.url))
+                          setInitialUploadUrl(String(j.url))
+                          // Switch to upload to continue with Autoclipper
+                          setSourceType('upload')
+                        } catch (e: any) { setYtError(e?.message || 'Failed') } finally { setYtLoading(false) }
+                      }}
+                      disabled={ytLoading || !ytUrl.trim()}
+                    >{ytLoading ? 'Downloading…' : 'Download'}</button>
                   </div>
+                </label>
+                {ytError && <div className="mt-2 text-xs text-rose-300">{ytError}</div>}
+                {ytResultUrl && (
+                  <div className="mt-2 text-xs text-white/70">Downloaded • <a className="underline" href={ytResultUrl} target="_blank" rel="noreferrer">Open file</a></div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Veo3 (feature-gated) */}
-          {process.env.NEXT_PUBLIC_ENABLE_VEO3 === '1' && (
-            <div className="mt-8 space-y-3 rounded-2xl bg-white/5 ring-1 ring-white/10 p-4">
-              <div className="text-sm font-semibold">AI Video (Veo3)</div>
-              <p className="text-xs text-white/60">Generate an AI video from a text prompt. Configure provider env vars to enable.</p>
-              <Veo3Form token={session?.access_token} />
+          {/* Upload (Autoclipper inline) */}
+          {sourceType === 'upload' && (
+            <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
+              <AutoclipperSimple initialUrl={initialUploadUrl} />
             </div>
           )}
-
-          {/* Error */}
-          {error && <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>}
-
-          {/* Result */}
-          {result && (
-            <div className="pt-4 space-y-3">
-              {result.mp3_url && (
-                <div className="space-y-2">
-                  <audio controls src={result.mp3_url} className="w-full" />
-                  <div className="flex gap-2">
-                    <a className="btn" href={result.mp3_url} target="_blank">Download MP3</a>
-                    <button className="btn-primary" onClick={handleRender} disabled={isRendering || !result.csv_url}>
-                      {isRendering ? 'Rendering…' : 'Render Video (MP4)'}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {result.csv_url && (
-                <div>
-                  <a className="btn" href={result.csv_url} target="_blank">Download CSV</a>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Previous projects grid */}
-          <ProjectsGrid token={session?.access_token} refresh={projectsRefresh} />
         </div>
+
+        {/* Upload and YouTube are now integrated above via the Source dropdown */}
       </main>
     </>
   );
 }
 
-function msToHMS(ms: number){
-  ms = Math.max(0, Math.floor(ms));
-  const h = Math.floor(ms/3600000);
-  const m = Math.floor((ms%3600000)/60000);
-  const s = Math.floor((ms%60000)/1000);
-  const pad = (n: number, w: number=2)=> String(n).padStart(w,'0');
-  return `${pad(h,1)}:${pad(m)}:${pad(s)}`
-}
 
-function Veo3Form({ token }: { token?: string }) {
-  const [prompt, setPrompt] = useState('A cinematic drone shot over neon city at night')
-  const [duration, setDuration] = useState(6)
-  const [ar, setAr] = useState<'9:16' | '1:1' | '16:9'>('9:16')
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [status, setStatus] = useState<string>('')
+  const [uploadedUrl, setUploadedUrl] = useState<string>(initialUrl || '')
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function onGenerate() {
-    setLoading(true); setErr(null)
+  async function uploadToBlob(f: File): Promise<string> {
+    setStatus('Uploading to Blob...')
+    const r = await fetch('/api/blob/upload', {
+      method: 'POST',
+      headers: { 'content-type': f.type || 'application/octet-stream', 'x-filename': f.name || 'upload.mp4' },
+      body: f,
+    })
+    const j = await r.json()
+    if (!r.ok) throw new Error(j?.error || 'Blob upload failed')
+    return String(j.url)
+  }
+
+  async function onFileChange(f?: File | null) {
     try {
-      const res = await fetch('/api/video/veo3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ prompt, duration, aspect_ratio: ar }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || 'Failed to start Veo3 job')
-      if (data?.video_url) {
-        const a = document.createElement('a')
-        a.href = data.video_url
-        a.download = `veo3-${Date.now()}.mp4`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-      } else {
-        alert(data?.message || 'Veo3 job accepted. Check back soon.')
-      }
+      setError(null)
+      setStatus('')
+      if (!f) return
+      setIsUploading(true)
+      const url = await uploadToBlob(f)
+      setUploadedUrl(url)
+      setStatus('Uploaded.')
     } catch (e: any) {
-      setErr(e?.message || 'Failed to generate video')
+      setError(e?.message || 'Upload failed')
     } finally {
-      setLoading(false)
+      setIsUploading(false)
     }
   }
 
   return (
-    <div className="space-y-3">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-white/60">Prompt</span>
-        <textarea className="w-full h-24 rounded-xl bg-white/5 ring-1 ring-white/10 p-3" value={prompt} onChange={e => setPrompt(e.target.value)} />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="space-y-4">
+      {/* Upload video */}
+      <div>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Duration (sec)</span>
-          <input type="number" min={2} max={10} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={duration} onChange={e => setDuration(parseInt(e.target.value || '6', 10))} />
+          <span className="text-xs text-white/60">Upload a video (mp4/mov/webm)</span>
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            disabled={Boolean(uploadedUrl)}
+            onChange={(e)=>{ const f = e.target.files?.[0] || null; setFile(f); setUploadedUrl(''); setProgress(0); setStatus(''); if (f) void onFileChange(f) }} />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Aspect ratio</span>
-          <select className="rounded-xl bg-white/5 ring-1 ring-white/10 p-2" value={ar} onChange={e => setAr(e.target.value as any)}>
-            <option value="9:16">9:16</option>
-            <option value="1:1">1:1</option>
-            <option value="16:9">16:9</option>
-          </select>
-        </label>
+        {(status || uploadedUrl) && (
+          <div className="mt-2 text-xs text-white/70">
+            {uploadedUrl ? (
+              <>Using uploaded URL • <a className="underline" href={uploadedUrl} target="_blank" rel="noreferrer">Open file</a></>
+            ) : status}
+          </div>
+        )}
+        {error && <div className="mt-2 rounded-lg border border-rose-400/40 bg-rose-500/10 p-2 text-xs text-rose-200">{error}</div>}
       </div>
-      {err && <div className="text-xs text-rose-300">{err}</div>}
-      <button onClick={onGenerate} disabled={loading} className={`btn-primary ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}>
-        {loading ? 'Generating…' : 'Generate with Veo3'}
-      </button>
     </div>
   )
 }
 
-function ProjectsGrid({ token, refresh }: { token?: string, refresh?: number }) {
+
+function ProjectsGrid({ token }: { token?: string }) {
   const [items, setItems] = useState<Array<{ id: string; title: string; mp3_url: string; csv_url: string; thumb_url: string | null; updated_at: string | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
