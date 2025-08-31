@@ -6,7 +6,7 @@ import path from 'path';
 import crypto from 'crypto';
 import ffmpegLib from 'fluent-ffmpeg';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { spawnSync } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
@@ -796,63 +796,154 @@ app.post('/download_youtube', async (req, res) => {
     let videoId = ''
     try { videoId = ytdl.getURLVideoID(youtube_url) } catch {}
     const cleanUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : youtube_url
-    const REQ = { requestOptions: { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', 'accept-language': 'en-US,en;q=0.9', 'dnt': '1', 'upgrade-insecure-requests': '1' } } }
-    const info = await ytdl.getInfo(cleanUrl, REQ)
-    const title = info?.videoDetails?.title || ''
-    const length_seconds = Number(info?.videoDetails?.lengthSeconds || 0) || 0
+    const cookieHdr = (process.env.YT_COOKIES || '').trim()
+    const cookieB64 = (process.env.YT_COOKIES_B64 || '').trim()
+    const hasConsent = /(?:^|;\s*)CONSENT=/.test(cookieHdr)
+    const combinedCookie = (cookieHdr ? cookieHdr : '') + (hasConsent ? '' : (cookieHdr ? '; ' : '') + 'CONSENT=YES+1')
+    const REQ = { requestOptions: { headers: {
+      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'accept-language': 'en-US,en;q=0.9',
+      'accept-encoding': 'gzip, deflate, br',
+      'cache-control': 'max-age=0',
+      'dnt': '1',
+      'upgrade-insecure-requests': '1',
+      // Client hints + fetch metadata to better mimic browser requests
+      'sec-ch-ua': '"Chromium";v="126", "Not;A=Brand";v="24", "Google Chrome";v="126"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"macOS"',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'same-origin',
+      'referer': 'https://www.youtube.com/',
+      'origin': 'https://www.youtube.com',
+      ...(combinedCookie ? { cookie: combinedCookie } : {})
+    } } }
+    const ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    let title = ''
+    let length_seconds = 0
+    let downloaded = false
 
-    // Try to find a progressive (audio+video) MP4 format first
-    const avFormats = ytdl.filterFormats(info.formats, 'videoandaudio') || []
-    let fmt = avFormats.filter(f => String(f.container||'').toLowerCase()==='mp4')
-      .sort((a,b)=> (Number(b.width||0) - Number(a.width||0)) || (Number(b.bitrate||0) - Number(a.bitrate||0)))[0]
-    if (!fmt) fmt = avFormats.sort((a,b)=> (Number(b.width||0) - Number(a.width||0)) || (Number(b.bitrate||0) - Number(a.bitrate||0)))[0]
+    const disableYtdlCore = /^(1|true|yes)$/i.test(String(process.env.DISABLE_YTDL_CORE||''))
 
-    if (fmt && fmt.itag){
-      // Download progressive stream directly to MP4 file
-      await new Promise((resolve, reject) => {
-        const stream = ytdl(cleanUrl, { quality: fmt.itag, highWaterMark: 1<<25, ...REQ })
-        const ws = fs.createWriteStream(outPath)
-        stream.on('error', reject)
-        ws.on('error', reject)
-        ws.on('finish', resolve)
-        stream.pipe(ws)
-      })
-    } else {
-      // Fallback: download best video-only + best audio-only and merge/transcode
-      const vPath = path.join(tmp, `${crypto.randomUUID()}.video`)
-      const aPath = path.join(tmp, `${crypto.randomUUID()}.audio`)
-      await new Promise((resolve, reject) => {
-        const vs = ytdl(cleanUrl, { quality: 'highestvideo', filter: 'videoonly', highWaterMark: 1<<25, ...REQ })
-        const ws = fs.createWriteStream(vPath)
-        let done = false
-        const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
-        vs.on('error', reject)
-        ws.on('error', reject)
-        ws.on('finish', finish)
-        vs.pipe(ws)
-      })
-      await new Promise((resolve, reject) => {
-        const as = ytdl(cleanUrl, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25, ...REQ })
-        const ws = fs.createWriteStream(aPath)
-        let done = false
-        const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
-        as.on('error', reject)
-        ws.on('error', reject)
-        ws.on('finish', finish)
-        as.pipe(ws)
-      })
-      // Merge with ffmpeg (transcode to ensure MP4 H.264/AAC)
-      await new Promise((resolve, reject) => {
-        try {
-          const cmd = ffmpegLib()
-          cmd.input(vPath)
-          cmd.input(aPath)
-          cmd.outputOptions(['-c:v','libx264','-preset','medium','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k'])
-          cmd.on('end', resolve)
-          cmd.on('error', reject)
-          cmd.save(outPath)
-        } catch (e) { reject(e) }
-      })
+    // Primary path: ytdl-core (unless disabled)
+    if (!disableYtdlCore){
+      try {
+        const info = await ytdl.getInfo(cleanUrl, REQ)
+        title = info?.videoDetails?.title || ''
+        length_seconds = Number(info?.videoDetails?.lengthSeconds || 0) || 0
+
+        const avFormats = ytdl.filterFormats(info.formats, 'videoandaudio') || []
+        let fmt = avFormats.filter(f => String(f.container||'').toLowerCase()==='mp4')
+          .sort((a,b)=> (Number(b.width||0) - Number(a.width||0)) || (Number(b.bitrate||0) - Number(a.bitrate||0)))[0]
+        if (!fmt) fmt = avFormats.sort((a,b)=> (Number(b.width||0) - Number(a.bitrate||0)))[0]
+
+        if (fmt && fmt.itag){
+          await new Promise((resolve, reject) => {
+            const stream = ytdl(cleanUrl, { quality: fmt.itag, highWaterMark: 1<<25, ...REQ })
+            const ws = fs.createWriteStream(outPath)
+            stream.on('error', reject)
+            ws.on('error', reject)
+            ws.on('finish', resolve)
+            stream.pipe(ws)
+          })
+          downloaded = true
+        } else {
+          const vPath = path.join(tmp, `${crypto.randomUUID()}.video`)
+          const aPath = path.join(tmp, `${crypto.randomUUID()}.audio`)
+          await new Promise((resolve, reject) => {
+            const vs = ytdl(cleanUrl, { quality: 'highestvideo', filter: 'videoonly', highWaterMark: 1<<25, ...REQ })
+            const ws = fs.createWriteStream(vPath)
+            let done = false
+            const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
+            vs.on('error', reject)
+            ws.on('error', reject)
+            ws.on('finish', finish)
+            vs.pipe(ws)
+          })
+          await new Promise((resolve, reject) => {
+            const as = ytdl(cleanUrl, { quality: 'highestaudio', filter: 'audioonly', highWaterMark: 1<<25, ...REQ })
+            const ws = fs.createWriteStream(aPath)
+            let done = false
+            const finish = ()=> { if (!done){ done = true; resolve(undefined) } }
+            as.on('error', reject)
+            ws.on('error', reject)
+            ws.on('finish', finish)
+            as.pipe(ws)
+          })
+          await new Promise((resolve, reject) => {
+            try {
+              const cmd = ffmpegLib()
+              cmd.input(vPath)
+              cmd.input(aPath)
+              cmd.outputOptions(['-c:v','libx264','-preset','medium','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k'])
+              cmd.on('end', resolve)
+              cmd.on('error', reject)
+              cmd.save(outPath)
+            } catch (e) { reject(e) }
+          })
+          downloaded = true
+        }
+      } catch (e) {
+        console.warn('ytdl-core path failed, will try yt-dlp fallback:', e?.message || e)
+      }
+    }
+
+    // Fallback path: yt-dlp (static binary)
+    if (!downloaded){
+      try {
+        const ytBin = '/usr/local/bin/yt-dlp'
+        const args = []
+        // add headers
+        args.push('--add-header', `User-Agent: ${ua}`)
+        args.push('--add-header', 'Accept-Language: en-US,en;q=0.9')
+        args.push('--add-header', 'Referer: https://www.youtube.com/')
+        // Prefer a provided Netscape cookies file via base64; else synthesize from header cookies
+        let cookieFile = ''
+        if (cookieB64){
+          try {
+            const ckTmp = path.join(tmp, 'cookies.txt')
+            fs.writeFileSync(ckTmp, Buffer.from(cookieB64, 'base64'))
+            cookieFile = ckTmp
+            args.push('--cookies', cookieFile)
+          } catch {}
+        } else if (combinedCookie){
+          try {
+            const ckTmp = path.join(tmp, 'cookies.txt')
+            const nowExp = 2147483647 // far future
+            const pairs = String(combinedCookie).split(/;\s*/).map(s=>s.trim()).filter(Boolean)
+            const lines = ['# Netscape HTTP Cookie File']
+            for (const pair of pairs){
+              const eq = pair.indexOf('='); if (eq <= 0) continue
+              const name = pair.slice(0, eq).trim()
+              const value = pair.slice(eq+1).trim()
+              const domain = '.youtube.com'
+              const includeSub = 'TRUE'
+              const pathCookie = '/'
+              const secure = 'FALSE'
+              lines.push([domain, includeSub, pathCookie, secure, String(nowExp), name, value].join('\t'))
+            }
+            fs.writeFileSync(ckTmp, lines.join('\n'), 'utf8')
+            cookieFile = ckTmp
+            args.push('--cookies', cookieFile)
+          } catch {}
+        }
+        // format selection and output
+        args.push('-f','bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best','--merge-output-format','mp4','-o', outPath, cleanUrl)
+        await new Promise((resolve, reject) => {
+          const p = spawn(ytBin, args, { stdio: ['ignore','inherit','inherit'] })
+          p.on('error', reject)
+          p.on('exit', (code) => code === 0 ? resolve(undefined) : reject(new Error(`yt-dlp exited with ${code}`)))
+        })
+        downloaded = true
+      } catch (e) {
+        console.warn('yt-dlp fallback failed:', e?.message || e)
+      }
+    }
+
+    if (!downloaded){
+      try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}
+      return res.status(502).json({ error: 'youtube download failed' })
     }
 
     // Upload or stream
