@@ -42,9 +42,12 @@ const supabaseAdmin = getSupabaseAdmin()
       folders.map(async (f: any) => {
         const projectId = String(f.name)
         const base = `${safeId}/${projectId}`
-        const mp3 = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/voiceover.mp3`).data.publicUrl
-        const csv = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/captions.csv`).data.publicUrl
-        const thumb = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/thumb.svg`).data.publicUrl
+        let mp3 = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/voiceover.mp3`).data.publicUrl
+        let csv = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/captions.csv`).data.publicUrl
+        let thumb = supabaseAdmin.storage.from('clips').getPublicUrl(`${base}/thumb.svg`).data.publicUrl
+        try { const s = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/voiceover.mp3`, 604800); if (s.data?.signedUrl) mp3 = s.data.signedUrl } catch {}
+        try { const s = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/captions.csv`, 604800); if (s.data?.signedUrl) csv = s.data.signedUrl } catch {}
+        try { const s = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/thumb.svg`, 604800); if (s.data?.signedUrl) thumb = s.data.signedUrl } catch {}
         return { id: projectId, title: projectId, mp3_url: mp3, csv_url: csv, thumb_url: thumb, updated_at: (f as any)?.updated_at || null }
       })
     )
@@ -58,6 +61,19 @@ const supabaseAdmin = getSupabaseAdmin()
       const tb = b?.updated_at ? new Date(b.updated_at).getTime() : 0
       return tb - ta
     })
+
+    // Replace URLs with signed URLs to avoid 400s on private buckets
+    for (const p of projects){
+      try {
+        const base = `${safeId}/${p.id}`
+        const s1 = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/voiceover.mp3`, 604800)
+        const s2 = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/captions.csv`, 604800)
+        const s3 = await supabaseAdmin.storage.from('clips').createSignedUrl(`${base}/thumb.svg`, 604800)
+        p.mp3_url = s1.data?.signedUrl || p.mp3_url
+        p.csv_url = s2.data?.signedUrl || p.csv_url
+        p.thumb_url = s3.data?.signedUrl || p.thumb_url
+      } catch {}
+    }
 
     return NextResponse.json({ projects }, { headers })
   } catch (e: any) {
