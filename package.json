@@ -17,6 +17,7 @@
     "typescript": "^5.6.2"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "@supabase/supabase-js": "^2.45.4",
