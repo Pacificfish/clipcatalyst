@@ -38,6 +38,7 @@ export default function LabPage() {
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [ytResultUrl, setYtResultUrl] = useState<string>('');
+  const [ytProgress, setYtProgress] = useState<number>(0);
 
   const supabase = getSupabaseClient();
   useEffect(() => {
@@ -45,6 +46,35 @@ export default function LabPage() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Fake progress animation for YouTube downloads
+  useEffect(() => {
+    let raf = 0;
+    if (ytLoading) {
+      let p = 0;
+      let last = performance.now();
+      const target = 90; // ease toward 90% while in-flight
+      const tick = (now: number) => {
+        const dt = Math.max(0, (now - last) / 1000);
+        last = now;
+        const base = 8 * dt * (1 - p / target);
+        const wobble = 0.3 * Math.sin(now / 250);
+        p = Math.min(target, p + Math.max(0.5, base + wobble));
+        setYtProgress(p);
+        if (ytLoading && p < target) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }
+    return () => { if (raf) cancelAnimationFrame(raf); };
+  }, [ytLoading]);
+
+  // After completion, briefly show 100% then reset
+  useEffect(() => {
+    if (!ytLoading && ytProgress === 100) {
+      const t = setTimeout(() => setYtProgress(0), 1600);
+      return () => clearTimeout(t);
+    }
+  }, [ytLoading, ytProgress]);
 
   // Fetch usage to show remaining credits
   useEffect(() => {
@@ -390,7 +420,7 @@ export default function LabPage() {
                       className="btn"
                       onClick={async ()=>{
                         try {
-                          setYtLoading(true); setYtError(null); setYtResultUrl('')
+                          setYtLoading(true); setYtError(null); setYtResultUrl(''); setYtProgress(0);
                           const r = await fetch('/api/worker/proxy?path=download_youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
                           const j = await r.json(); if (!r.ok) throw new Error(j?.error || j?.details || 'Failed')
                           if (!j?.url) throw new Error('Unexpected response')
@@ -398,12 +428,30 @@ export default function LabPage() {
                           setInitialUploadUrl(String(j.url))
                           // Switch to upload to continue with Autoclipper
                           setSourceType('upload')
-                        } catch (e: any) { setYtError(e?.message || 'Failed') } finally { setYtLoading(false) }
+                          setYtProgress(100)
+                        } catch (e: any) { setYtError(e?.message || 'Failed'); setYtProgress(100) } finally { setYtLoading(false) }
                       }}
                       disabled={ytLoading || !ytUrl.trim()}
                     >{ytLoading ? 'Downloading…' : 'Download'}</button>
                   </div>
                 </label>
+                {(ytLoading || ytProgress > 0) && (
+                  <div className="mt-3">
+                    <div className="cc-prog" aria-hidden="true">
+                      <div
+                        className="cc-prog-fill"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(ytProgress)}
+                        style={{ width: `${Math.round(ytProgress)}%` }}
+                      />
+                    </div>
+                    <div className="cc-prog-status text-xs text-white/60 mt-1">
+                      {ytLoading ? 'Downloading…' : (ytError ? 'Download failed' : (ytResultUrl ? 'Download complete' : ''))}
+                    </div>
+                  </div>
+                )}
                 {ytError && <div className="mt-2 text-xs text-rose-300">{ytError}</div>}
                 {ytResultUrl && (
                   <div className="mt-2 text-xs text-white/70">Downloaded • <a className="underline" href={ytResultUrl} target="_blank" rel="noreferrer">Open file</a></div>
