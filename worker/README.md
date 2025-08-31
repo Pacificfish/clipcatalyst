@@ -5,7 +5,7 @@ Endpoints:
 - GET /healthz
 - GET /diag
 - POST /download_youtube
-  - Inputs (JSON): { youtube_url: string }
+  - Inputs (JSON): { youtube_url: string, cookies_txt_base64?: string, force_client?: 'ios'|'android'|'', force_ipv4?: boolean }
   - Behavior:
     - Tries to download a progressive MP4 (audio+video). If unavailable, downloads best video+audio separately and merges via ffmpeg to MP4 (H.264/AAC).
     - If BLOB_READ_WRITE_TOKEN is set: uploads to Vercel Blob and returns { url, key, title?, length_seconds? }

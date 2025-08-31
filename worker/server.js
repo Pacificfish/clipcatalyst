@@ -836,10 +836,15 @@ app.post('/download_youtube', async (req, res) => {
     let videoId = ''
     try { videoId = ytdl.getURLVideoID(youtube_url) } catch {}
     const cleanUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : youtube_url
-    const cookieHdr = (process.env.YT_COOKIES || '').trim()
-    const cookieB64 = (process.env.YT_COOKIES_B64 || '').trim()
-    const hasConsent = /(?:^|;\s*)CONSENT=/.test(cookieHdr)
-    const combinedCookie = (cookieHdr ? cookieHdr : '') + (hasConsent ? '' : (cookieHdr ? '; ' : '') + 'CONSENT=YES+1')
+
+    // Accept cookies from multiple sources (priority: request body cookies_txt_base64 > env YT_COOKIES_B64 > env YT_COOKIES header-string)
+    const cookiesTxtBase64 = String((req.body && req.body.cookies_txt_base64) || '').trim()
+    const cookieHdrEnv = (process.env.YT_COOKIES || '').trim()
+    const cookieB64Env = (process.env.YT_COOKIES_B64 || '').trim()
+    // Maintain consent cookie for header-string path
+    const hasConsent = /(?:^|;\s*)CONSENT=/.test(cookieHdrEnv)
+    const combinedCookieHdr = (cookieHdrEnv ? cookieHdrEnv : '') + (hasConsent ? '' : (cookieHdrEnv ? '; ' : '') + 'CONSENT=YES+1')
+
     const REQ = { requestOptions: { headers: {
       'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -857,7 +862,7 @@ app.post('/download_youtube', async (req, res) => {
       'sec-fetch-site': 'same-origin',
       'referer': 'https://www.youtube.com/',
       'origin': 'https://www.youtube.com',
-      ...(combinedCookie ? { cookie: combinedCookie } : {})
+      ...(combinedCookieHdr ? { cookie: combinedCookieHdr } : {})
     } } }
     const ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     let title = ''
@@ -865,6 +870,8 @@ app.post('/download_youtube', async (req, res) => {
     let downloaded = false
 
     const disableYtdlCore = /^(1|true|yes)$/i.test(String(process.env.DISABLE_YTDL_CORE||''))
+    const forceClient = String((req.body && req.body.force_client) || '').trim().toLowerCase() // e.g., 'ios' or 'android'
+    const forceIpv4 = /^(1|true|yes)$/i.test(String((req.body && req.body.force_ipv4) || process.env.YT_DLP_FORCE_IPV4 || ''))
 
     // Primary path: ytdl-core (unless disabled)
     if (!disableYtdlCore){
@@ -949,17 +956,23 @@ app.post('/download_youtube', async (req, res) => {
 
         // Build cookies file if provided
         let cookieFile = ''
-        if (cookieB64){
+        if (cookiesTxtBase64){
           try {
             const ckTmp = path.join(tmp, 'cookies.txt')
-            fs.writeFileSync(ckTmp, Buffer.from(cookieB64, 'base64'))
+            fs.writeFileSync(ckTmp, Buffer.from(cookiesTxtBase64, 'base64'))
             cookieFile = ckTmp
           } catch {}
-        } else if (combinedCookie){
+        } else if (cookieB64Env){
+          try {
+            const ckTmp = path.join(tmp, 'cookies.txt')
+            fs.writeFileSync(ckTmp, Buffer.from(cookieB64Env, 'base64'))
+            cookieFile = ckTmp
+          } catch {}
+        } else if (combinedCookieHdr){
           try {
             const ckTmp = path.join(tmp, 'cookies.txt')
             const nowExp = 2147483647 // far future
-            const pairs = String(combinedCookie).split(/;\s*/).map(s=>s.trim()).filter(Boolean)
+            const pairs = String(combinedCookieHdr).split(/;\s*/).map(s=>s.trim()).filter(Boolean)
             const lines = ['# Netscape HTTP Cookie File']
             for (const pair of pairs){
               const eq = pair.indexOf('='); if (eq <= 0) continue
@@ -983,6 +996,7 @@ app.post('/download_youtube', async (req, res) => {
         const baseArgs = [
           '--ignore-config', '--no-call-home', '--no-playlist', '--no-continue', '--no-part',
           '--retries','10','--fragment-retries','10','--retry-sleep','1:3', '--socket-timeout','15',
+          ...(forceIpv4 ? ['--force-ipv4'] : []),
           '--add-header', `User-Agent: ${ua}`, '--add-header', 'Accept-Language: en-US,en;q=0.9', '--add-header', 'Referer: https://www.youtube.com/'
         ]
 
@@ -990,6 +1004,9 @@ app.post('/download_youtube', async (req, res) => {
         // Attempt 1: with cookies if present
         const args1 = [...baseArgs]
         if (cookieFile) args1.push('--cookies', cookieFile)
+        if (forceClient === 'ios') args1.push('--extractor-args', 'youtube:player_client=ios')
+        else if (forceClient === 'android') args1.push('--extractor-args', 'youtube:player_client=android')
+        else args1.push('--extractor-args', 'youtube:player_client=web_safari-17.4')
         args1.push('-f', format, '--merge-output-format','mp4','-o', outPath, cleanUrl)
         attempts.push({ name: 'cookies+default', args: args1 })
 
