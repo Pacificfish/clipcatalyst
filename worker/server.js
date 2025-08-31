@@ -763,6 +763,46 @@ app.post('/suggest_highlights', async (req, res) => {
 // Download a YouTube video and make it available (Blob/S3/stream)
 // Body: { youtube_url: string }
 // Returns: { url, key, title?, length_seconds? } when storage configured, else streams MP4
+
+// Convenience GET handler to support direct links: forwards to POST internally
+app.get('/download_youtube', async (req, res) => {
+  try {
+    // Validate auth (shared-secret via header, or signed token via t+ts)
+    const required = process.env.SHARED_SECRET
+    const token = req.query && (req.query.token || req.query.t)
+    const ts = req.query && (req.query.ts || req.query.time)
+    let ok = false
+    if (required){
+      if (req.header('x-shared-secret') === required) ok = true
+      else if (token && ts){
+        try {
+          const now = Math.floor(Date.now()/1000)
+          const tnum = parseInt(String(ts),10)
+          if (Math.abs(now - tnum) < 600){
+            const cryptoNode = await import('crypto')
+            const h = cryptoNode.createHmac('sha256', required).update(String(ts)).digest('hex')
+            if (h === token) ok = true
+          }
+        } catch {}
+      }
+      if (!ok) return res.status(403).json({ error: 'forbidden' })
+    }
+    const youtube_url = String((req.query && (req.query.youtube_url || req.query.u)) || '').trim()
+    if (!youtube_url) return res.status(400).json({ error: 'youtube_url is required' })
+    const port = Number(process.env.PORT || 8080)
+    const q = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+    const url = `http://127.0.0.1:${port}/download_youtube${q}`
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(req.header('x-shared-secret') ? { 'X-Shared-Secret': req.header('x-shared-secret') } : {}) }, body: JSON.stringify({ youtube_url }) })
+    const txt = await r.text().catch(()=> '')
+    res.status(r.status)
+    const ct = r.headers.get('content-type') || ''
+    if (ct.includes('application/json')) res.set('Content-Type','application/json')
+    return res.send(txt)
+  } catch (e) {
+    return res.status(500).json({ error: 'GET forward failed', details: String(e?.message || e) })
+  }
+})
+
 app.post('/download_youtube', async (req, res) => {
   try {
     const required = process.env.SHARED_SECRET
@@ -893,19 +933,27 @@ app.post('/download_youtube', async (req, res) => {
     if (!downloaded){
       try {
         const ytBin = '/usr/local/bin/yt-dlp'
-        const args = []
-        // add headers
-        args.push('--add-header', `User-Agent: ${ua}`)
-        args.push('--add-header', 'Accept-Language: en-US,en;q=0.9')
-        args.push('--add-header', 'Referer: https://www.youtube.com/')
-        // Prefer a provided Netscape cookies file via base64; else synthesize from header cookies
+
+        // Helper to run yt-dlp and capture output while echoing to logs
+        async function runYtDlp(args){
+          return await new Promise((resolve) => {
+            const proc = spawn(ytBin, args, { stdio: ['ignore','pipe','pipe'] })
+            let out = ''
+            let err = ''
+            proc.stdout.on('data', (d)=>{ const s = d.toString(); out += s; process.stdout.write(s) })
+            proc.stderr.on('data', (d)=>{ const s = d.toString(); err += s; process.stderr.write(s) })
+            proc.on('error', (e)=> resolve({ ok:false, code: -1, out, err, error: e }))
+            proc.on('exit', (code)=> resolve({ ok: code===0, code: code||0, out, err, error: null }))
+          })
+        }
+
+        // Build cookies file if provided
         let cookieFile = ''
         if (cookieB64){
           try {
             const ckTmp = path.join(tmp, 'cookies.txt')
             fs.writeFileSync(ckTmp, Buffer.from(cookieB64, 'base64'))
             cookieFile = ckTmp
-            args.push('--cookies', cookieFile)
           } catch {}
         } else if (combinedCookie){
           try {
@@ -925,16 +973,52 @@ app.post('/download_youtube', async (req, res) => {
             }
             fs.writeFileSync(ckTmp, lines.join('\n'), 'utf8')
             cookieFile = ckTmp
-            args.push('--cookies', cookieFile)
           } catch {}
         }
-        // format selection and output
-        args.push('-f','bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best','--merge-output-format','mp4','-o', outPath, cleanUrl)
-        await new Promise((resolve, reject) => {
-          const p = spawn(ytBin, args, { stdio: ['ignore','inherit','inherit'] })
-          p.on('error', reject)
-          p.on('exit', (code) => code === 0 ? resolve(undefined) : reject(new Error(`yt-dlp exited with ${code}`)))
-        })
+
+        // Common args
+        const maxHraw = Number(process.env.YT_DLP_MAX_HEIGHT || 720)
+        const maxH = Number.isFinite(maxHraw) && maxHraw >= 240 ? Math.min(2160, Math.floor(maxHraw)) : 720
+        const format = `bv*[ext=mp4][height<=${maxH}]+ba[ext=m4a]/b[ext=mp4][height<=${maxH}]/best`
+        const baseArgs = [
+          '--ignore-config', '--no-call-home', '--no-playlist', '--no-continue', '--no-part',
+          '--retries','10','--fragment-retries','10','--retry-sleep','1:3', '--socket-timeout','15',
+          '--add-header', `User-Agent: ${ua}`, '--add-header', 'Accept-Language: en-US,en;q=0.9', '--add-header', 'Referer: https://www.youtube.com/'
+        ]
+
+        const attempts = []
+        // Attempt 1: with cookies if present
+        const args1 = [...baseArgs]
+        if (cookieFile) args1.push('--cookies', cookieFile)
+        args1.push('-f', format, '--merge-output-format','mp4','-o', outPath, cleanUrl)
+        attempts.push({ name: 'cookies+default', args: args1 })
+
+        // Attempt 2: no cookies, prefer safer clients
+        const args2 = [...baseArgs, '--extractor-args', 'youtube:player_client=web_safari-17.4,tv_embedded,android']
+        args2.push('-f', format, '--merge-output-format','mp4','-o', outPath, cleanUrl)
+        attempts.push({ name: 'nocookies+clients', args: args2 })
+
+        // Attempt 3: last resort - iOS client only (sometimes bypasses checks)
+        const args3 = [...baseArgs, '--extractor-args', 'youtube:player_client=ios']
+        args3.push('-f', format, '--merge-output-format','mp4','-o', outPath, cleanUrl)
+        attempts.push({ name: 'ios-client', args: args3 })
+
+        let ok = false
+        let lastErr = ''
+        for (const at of attempts){
+          console.log(`yt-dlp attempt: ${at.name}`)
+          const r = await runYtDlp(at.args)
+          if (r.ok){ ok = true; break }
+          lastErr = (r.err || r.out || '').slice(-2000)
+          // If cookies explicitly invalid, drop them for next attempts automatically
+          if (/cookies are no longer valid|Sign in to confirm you.?re not a bot/i.test(r.err || r.out || '')){
+            // ensure next attempts don't try cookies
+            for (const a of attempts){
+              const i = a.args.indexOf('--cookies'); if (i>=0){ a.args.splice(i, 2) }
+            }
+          }
+        }
+        if (!ok){ throw new Error(lastErr || 'yt-dlp failed') }
         downloaded = true
       } catch (e) {
         console.warn('yt-dlp fallback failed:', e?.message || e)
