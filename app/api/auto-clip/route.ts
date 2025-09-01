@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
       bypass: bypassFromClient,
     } = body || {}
 
-    if (!video_url || typeof video_url !== 'string') {
-      return NextResponse.json({ error: 'video_url is required' }, { status: 400 })
+    if ((!video_url || typeof video_url !== 'string') && !(typeof body.youtube_url === 'string' && body.youtube_url.trim())) {
+      return NextResponse.json({ error: 'video_url or youtube_url is required' }, { status: 400 })
     }
 
     // Prefer explicit RENDER_WORKER_URL to avoid drift with other envs

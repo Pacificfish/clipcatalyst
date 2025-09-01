@@ -509,6 +509,11 @@ function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
   const [uploadedUrl, setUploadedUrl] = useState<string>(initialUrl || '')
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Inline YouTube auto-clip
+  const [ytUrl2, setYtUrl2] = useState('')
+  const [ytBusy2, setYtBusy2] = useState(false)
+  const [ytErr2, setYtErr2] = useState<string | null>(null)
+  const [ytRes2, setYtRes2] = useState<any>(null)
 
   async function uploadToBlob(f: File): Promise<string> {
     setStatus('Uploading to Blob...')
@@ -558,6 +563,46 @@ function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
           </div>
         )}
         {error && <div className="mt-2 rounded-lg border border-rose-400/40 bg-rose-500/10 p-2 text-xs text-rose-200">{error}</div>}
+      </div>
+
+      {/* Or paste a YouTube link */}
+      <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3">
+        <div className="text-xs text-white/60 mb-2">Or paste a YouTube link to auto‑clip 3 × 60s:</div>
+        <div className="flex gap-2 items-center">
+          <input
+            type="url"
+            className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/10 p-2"
+            placeholder="https://www.youtube.com/watch?v=..."
+            value={ytUrl2}
+            onChange={(e)=> setYtUrl2(e.target.value)}
+          />
+          <button
+            className="btn-primary"
+            onClick={async ()=>{
+              try {
+                setYtBusy2(true); setYtErr2(null); setYtRes2(null)
+                const r = await fetch('/api/auto-clip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl2.trim() }) })
+                const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'Auto clip failed')
+                setYtRes2(j)
+              } catch (e: any) { setYtErr2(e?.message || 'Auto clip failed') } finally { setYtBusy2(false) }
+            }}
+            disabled={ytBusy2 || !ytUrl2.trim()}
+          >{ytBusy2 ? 'Auto clipping…' : 'Auto Clip'}</button>
+        </div>
+        {ytErr2 && <div className="mt-2 text-xs text-rose-300">{ytErr2}</div>}
+        {ytRes2?.clips && Array.isArray(ytRes2.clips) && ytRes2.clips.length>0 && (
+          <div className="mt-3 space-y-2 text-xs">
+            <div className="text-white/80">Results:</div>
+            <ul className="space-y-1">
+              {ytRes2.clips.map((c:any, idx:number)=>(
+                <li key={idx} className="flex items-center gap-2">
+                  <span>Clip {idx+1} ({c.seconds}s)</span>
+                  {c.url && <a className="btn" href={c.url} target="_blank" rel="noreferrer">Open</a>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )
