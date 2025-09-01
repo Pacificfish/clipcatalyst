@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "express",
+  "routes": [
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/api/(.*)", "dest": "/api/index.js" }
+  ],
+  "env": {
+    "DOWNLOADER_BASE_URL": "https://clipcatalyst-worker.fly.dev"
+  }
+}
+

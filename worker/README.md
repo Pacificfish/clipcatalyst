@@ -4,6 +4,9 @@ Endpoints:
 
 - GET /healthz
 - GET /diag
+- GET /download_youtube
+  - Query: youtube_url, and optional cookies_txt_base64, force_client, force_ipv4
+  - Forwards internally to POST /download_youtube with the same options.
 - POST /download_youtube
   - Inputs (JSON): { youtube_url: string, cookies_txt_base64?: string, force_client?: 'ios'|'android'|'', force_ipv4?: boolean }
   - Behavior:
@@ -55,5 +58,8 @@ Environment Variables:
 - S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or IAM role (optional fallback if Blob token not set)
 - ASSEMBLYAI_API_KEY (only needed for /transcribe_assembly and /suggest_highlights)
 - FFMPEG_PATH, FFPROBE_PATH (optional; autodetected)
+- YT_DLP_PATH (optional): path to yt-dlp binary. If unset, the worker auto-detects in this order: $YT_DLP_PATH, /opt/homebrew/bin/yt-dlp, /usr/local/bin/yt-dlp, /usr/bin/yt-dlp, then yt-dlp from PATH.
+- YT_DLP_MAX_HEIGHT (optional, default 720): max video height selected for downloads.
+- DEBUG_YT_DLP=1 (optional): include a truncated yt-dlp error snippet in 502 responses during development.
 - CAPTION_TIMING_SCALE, CAPTION_SHIFT_MS (optional)
 

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClipCatalyst – Auto Clipper Test</title>
+  <style>
+    :root { color-scheme: dark light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0 auto; padding: 24px; max-width: 900px; line-height: 1.45; background: #0b0b0f; color: #eaeaf0; }
+    h1 { margin-top: 0; }
+    .card { background: #151722; border: 1px solid #2a2e3d; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    label { display: block; font-weight: 600; margin-top: 12px; }
+    input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #383d52; background: #0f111a; color: #eaeaf0; }
+    input[type="checkbox"] { transform: scale(1.1); }
+    button { margin-top: 16px; background: #5b8cff; color: white; border: none; border-radius: 6px; padding: 10px 14px; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    pre { background: #0f111a; padding: 12px; border-radius: 6px; overflow: auto; white-space: pre-wrap; word-break: break-word; border: 1px solid #383d52; }
+    a { color: #79c0ff; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>ClipCatalyst – Auto Clipper</h1>
+  <p>Use this page to test the auto clipper endpoint. This forwards to the backend with a server-side secret, but requires your Vercel protection bypass token to be provided here for access.</p>
+
+  <div class="card">
+    <label for="video_url">Video URL (direct .mp4)</label>
+    <input id="video_url" type="text" placeholder="https://example.com/path/to/uploaded.mp4" />
+
+    <div class="row">
+      <div>
+        <label for="target_clip_count">Target clip count</label>
+        <input id="target_clip_count" type="number" value="3" min="1" max="10" />
+      </div>
+      <div>
+        <label for="language">Language (optional, e.g. en)</label>
+        <input id="language" type="text" placeholder="en" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="min_ms">Min duration (ms)</label>
+        <input id="min_ms" type="number" value="18000" min="1000" />
+      </div>
+      <div>
+        <label for="max_ms">Max duration (ms)</label>
+        <input id="max_ms" type="number" value="30000" min="2000" />
+      </div>
+    </div>
+
+    <label for="bg_url">Background URL (optional image/video)</label>
+    <input id="bg_url" type="text" placeholder="https://example.com/background.mp4" />
+
+    <label for="bypass">Vercel Protection Bypass Token</label>
+    <input id="bypass" type="text" placeholder="Paste your x-vercel-protection-bypass token" />
+
+    <button id="run_btn">Run Auto Clip</button>
+  </div>
+
+  <div class="card">
+    <h3>Result</h3>
+    <pre id="output">(nothing yet)</pre>
+  </div>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+    const btn = el('run_btn');
+    const out = el('output');
+
+    async function run() {
+      try {
+        btn.disabled = true;
+        out.textContent = 'Running...';
+        const body = {
+          video_url: el('video_url').value.trim(),
+          target_clip_count: Math.max(1, parseInt(el('target_clip_count').value || '3', 10)),
+          min_ms: Math.max(1000, parseInt(el('min_ms').value || '18000', 10)),
+          max_ms: Math.max(2000, parseInt(el('max_ms').value || '30000', 10))
+        };
+        const lang = el('language').value.trim();
+        if (lang) body.language = lang;
+        const bg = el('bg_url').value.trim();
+        if (bg) body.bg_url = bg;
+
+        const bypass = el('bypass').value.trim();
+        if (!bypass) {
+          out.textContent = 'Please paste your deployment protection bypass token.';
+          return;
+        }
+
+        const r = await fetch('/api/auto_clip_public', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-vercel-protection-bypass': bypass
+          },
+          body: JSON.stringify(body)
+        });
+        const txt = await r.text();
+        try {
+          const js = JSON.parse(txt);
+          out.textContent = JSON.stringify(js, null, 2);
+        } catch {
+          out.textContent = `Status: ${r.status}\n\n` + txt;
+        }
+      } catch (e) {
+        out.textContent = 'Error: ' + (e?.message || String(e));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    btn.addEventListener('click', run);
+  </script>
+</body>
+</html>
+
