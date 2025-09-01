@@ -29,3 +29,4 @@ coverage/
 # Lint cache
 .eslintcache
 
+.vercel

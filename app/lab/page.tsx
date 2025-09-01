@@ -39,6 +39,8 @@ export default function LabPage() {
   const [ytError, setYtError] = useState<string | null>(null);
   const [ytResultUrl, setYtResultUrl] = useState<string>('');
   const [ytProgress, setYtProgress] = useState<number>(0);
+  const [ytAutoBusy, setYtAutoBusy] = useState(false);
+  const [ytAutoResult, setYtAutoResult] = useState<any>(null);
 
   const supabase = getSupabaseClient();
   useEffect(() => {
@@ -304,7 +306,7 @@ export default function LabPage() {
                 <option value="paste">Paste text</option>
                 <option value="article">Article URL</option>
                 <option value="youtube">YouTube URL</option>
-                <option value="upload">Upload video</option>
+                <option value="upload">Auto Clipper</option>
               </select>
             </label>
           </div>
@@ -433,6 +435,18 @@ export default function LabPage() {
                       }}
                       disabled={ytLoading || !ytUrl.trim()}
                     >{ytLoading ? 'Downloading…' : 'Download'}</button>
+                    <button
+                      className="btn-primary"
+                      onClick={async ()=>{
+                        try {
+                          setYtAutoBusy(true); setYtAutoResult(null); setYtError(null);
+                          const r = await fetch('/api/auto-clip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
+                          const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'Auto clip failed')
+                          setYtAutoResult(j)
+                        } catch (e: any) { setYtError(e?.message || 'Auto clip failed') } finally { setYtAutoBusy(false) }
+                      }}
+                      disabled={ytLoading || ytAutoBusy || !ytUrl.trim()}
+                    >{ytAutoBusy ? 'Auto clipping…' : 'Auto Clip'}</button>
                   </div>
                 </label>
                 {(ytLoading || ytProgress > 0) && (
@@ -455,6 +469,19 @@ export default function LabPage() {
                 {ytError && <div className="mt-2 text-xs text-rose-300">{ytError}</div>}
                 {ytResultUrl && (
                   <div className="mt-2 text-xs text-white/70">Downloaded • <a className="underline" href={ytResultUrl} target="_blank" rel="noreferrer">Open file</a></div>
+                )}
+                {ytAutoResult?.clips && Array.isArray(ytAutoResult.clips) && ytAutoResult.clips.length>0 && (
+                  <div className="mt-3 space-y-2 text-xs">
+                    <div className="text-white/80">Auto Clipper results:</div>
+                    <ul className="space-y-1">
+                      {ytAutoResult.clips.map((c:any, idx:number)=>(
+                        <li key={idx} className="flex items-center gap-2">
+                          <span>Clip {idx+1} ({c.seconds}s)</span>
+                          {c.url && <a className="btn" href={c.url} target="_blank" rel="noreferrer">Open</a>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             </div>
@@ -516,7 +543,7 @@ function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
       {/* Upload video */}
       <div>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-white/60">Upload a video (mp4/mov/webm)</span>
+          <span className="text-xs text-white/60">Auto Clipper (upload .mp4/.mov/.webm)</span>
           <input
             type="file"
             accept="video/mp4,video/webm,video/quicktime"
