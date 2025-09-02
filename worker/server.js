@@ -11,6 +11,25 @@ import { spawn, spawnSync } from 'child_process';
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 
+// Simple in-memory job store for async operations
+const jobs = new Map(); // id -> { id, status: 'queued'|'running'|'completed'|'error', createdAt, updatedAt, result: any, error: string|null }
+function newJobId(){ return crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)) }
+function setJob(id, patch){ const cur = jobs.get(id) || { id, status: 'queued', createdAt: Date.now(), updatedAt: Date.now(), result: null, error: null }; const next = { ...cur, ...patch, updatedAt: Date.now() }; jobs.set(id, next); return next }
+
+async function runAutoClipJob(params){
+  const port = Number(process.env.PORT || 8080)
+  const url = `http://127.0.0.1:${port}/auto_clip`
+  const headers = { 'Content-Type': 'application/json' }
+  if (process.env.SHARED_SECRET) headers['X-Shared-Secret'] = process.env.SHARED_SECRET
+  const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(params||{}) })
+  const txt = await r.text().catch(()=> '')
+  let parsed = null
+  try { parsed = JSON.parse(txt) } catch {}
+  if (!r.ok){ throw new Error((parsed && (parsed.error || parsed.details)) || txt || `auto_clip failed ${r.status}`) }
+  if (parsed==null) throw new Error('auto_clip returned non-JSON')
+  return parsed
+}
+
 const runningOnVercel = !!process.env.VERCEL;
 
 // On Vercel, ensure writeable CWD (use /tmp)
@@ -122,6 +141,69 @@ if (ffmpegPath) ffmpegLib.setFfmpegPath(ffmpegPath)
 if (ffprobePath) ffmpegLib.setFfprobePath(ffprobePath)
 
 const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+
+// Path to store admin-uploaded YouTube cookies (Netscape format)
+const COOKIES_STORE_PATH = process.env.YT_COOKIES_PATH || '/app/youtube_cookies.txt'
+
+function ensureNetscapeHeader(text){
+  const t = String(text || '').trim()
+  if (!t) return '# Netscape HTTP Cookie File\n'
+  const firstLine = t.split(/\r?\n/)[0]
+  if (/^#\s*(Netscape|HTTP)\s+Cookie\s+File/i.test(firstLine)) return t + (t.endsWith('\n') ? '' : '\n')
+  return `# Netscape HTTP Cookie File\n${t}${t.endsWith('\n') ? '' : '\n'}`
+}
+
+// Admin: upload cookies for YouTube (requires X-Shared-Secret)
+app.post('/admin/youtube_cookies', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+
+    const { cookies_txt_base64 = '', cookies_txt = '' } = req.body || {}
+    let buf = null
+    if (typeof cookies_txt_base64 === 'string' && cookies_txt_base64.trim()) {
+      try { buf = Buffer.from(cookies_txt_base64.trim(), 'base64') } catch {}
+    }
+    if (!buf && typeof cookies_txt === 'string' && cookies_txt.trim()) {
+      buf = Buffer.from(cookies_txt, 'utf8')
+    }
+    if (!buf || !buf.length) return res.status(400).json({ error: 'no_cookies_provided' })
+
+    // Normalize potential UTF-16 to UTF-8 and ensure Netscape header
+    function normalizeCookiesBuffer(raw){
+      try {
+        if (!raw || !raw.length) return Buffer.from('')
+        if (raw.length>=2 && raw[0]===0xFF && raw[1]===0xFE){
+          const td = new TextDecoder('utf-16le'); const s = td.decode(raw.slice(2)); return Buffer.from(ensureNetscapeHeader(s), 'utf8')
+        }
+        if (raw.length>=2 && raw[0]===0xFE && raw[1]===0xFF){
+          const le = Buffer.allocUnsafe(raw.length - 2)
+          for (let j=2, k=0; j+1<raw.length; j+=2, k+=2){ le[k] = raw[j+1]; le[k+1] = raw[j] }
+          const td = new TextDecoder('utf-16le'); const s = td.decode(le); return Buffer.from(ensureNetscapeHeader(s), 'utf8')
+        }
+        let nul = 0; for (let i=0;i<raw.length;i++){ if (raw[i]===0) nul++ }
+        if (nul > raw.length/4){ const td = new TextDecoder('utf-16le'); const s = td.decode(raw); return Buffer.from(ensureNetscapeHeader(s), 'utf8') }
+        // assume utf-8 text
+        const asText = raw.toString('utf8')
+        return Buffer.from(ensureNetscapeHeader(asText), 'utf8')
+      } catch { return raw }
+    }
+    const norm = normalizeCookiesBuffer(buf)
+    try { fs.writeFileSync(COOKIES_STORE_PATH, norm) } catch (e) { return res.status(500).json({ error: 'write_failed', details: String(e?.message || e) }) }
+    return res.json({ ok: true, bytes: norm.length, path: COOKIES_STORE_PATH })
+  } catch (e) { return res.status(500).json({ error: String(e?.message || e) }) }
+})
+
+// Admin: status of stored cookies (requires X-Shared-Secret)
+app.get('/admin/youtube_cookies', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+    let exists = false; let size = 0
+    try { const st = fs.statSync(COOKIES_STORE_PATH); exists = st.isFile(); size = st.size } catch {}
+    return res.json({ exists, size, path: COOKIES_STORE_PATH })
+  } catch (e) { return res.status(500).json({ error: String(e?.message || e) }) }
+})
 
 app.get('/healthz', (_, res) => res.send('ok'));
 app.get('/diag', (req, res) => {
@@ -862,7 +944,7 @@ app.get('/download_youtube', async (req, res) => {
     const force_client = String((req.query && (req.query.force_client || '')) || '').trim().toLowerCase()
     const force_ipv4 = /^(1|true|yes)$/i.test(String((req.query && (req.query.force_ipv4 || '')) || ''))
     const base = process.env.DOWNLOADER_BASE_URL || ''
-    const url = (runningOnVercel && base) ? `${base.replace(/\/$/,'')}/download_youtube` : `http://127.0.0.1:${Number(process.env.PORT || 8080)}/download_youtube`
+    const url = base ? `${base.replace(/\/$/,'')}/download_youtube` : `http://127.0.0.1:${Number(process.env.PORT || 8080)}/download_youtube`
     const body = { youtube_url }
     if (cookies_txt_base64) Object.assign(body, { cookies_txt_base64 })
     if (force_client) Object.assign(body, { force_client })
@@ -904,7 +986,7 @@ app.post('/download_youtube', async (req, res) => {
     if (!youtube_url) return res.status(400).json({ error: 'youtube_url is required' })
 
     // If running on Vercel and a downstream downloader base is configured, proxy the request
-    if (runningOnVercel && process.env.DOWNLOADER_BASE_URL){
+    if (process.env.DOWNLOADER_BASE_URL){
       try {
         const base = String(process.env.DOWNLOADER_BASE_URL||'').replace(/\/$/,'')
         const url = `${base}/download_youtube`
@@ -918,6 +1000,64 @@ app.post('/download_youtube', async (req, res) => {
       } catch (e) {
         return res.status(502).json({ error: 'proxy to downloader failed', details: String(e?.message || e) })
       }
+    }
+
+    // Option C: Third-party downloader vendor integration
+    // Configure via env:
+    // - YTDL_VENDOR_URL_TEMPLATE (e.g., "https://api.vendor.com/download?url={url}") OR
+    // - YTDL_VENDOR_BASE_URL (used as `${base}/download`)
+    // - YTDL_VENDOR_METHOD (GET or POST, default POST)
+    // - YTDL_VENDOR_KEY (API key, optional)
+    // - YTDL_VENDOR_AUTH_HEADER (header name for API key, default "X-API-Key")
+    try {
+      const tmpl = String(process.env.YTDL_VENDOR_URL_TEMPLATE||'').trim()
+      const base = String(process.env.YTDL_VENDOR_BASE_URL||'').replace(/\/$/,'')
+      const method = String(process.env.YTDL_VENDOR_METHOD||'POST').toUpperCase()
+      const apiKey = String(process.env.YTDL_VENDOR_KEY||'')
+      const authHeader = String(process.env.YTDL_VENDOR_AUTH_HEADER||'X-API-Key')
+      let vendorUrl = ''
+      let vendorReqInit = { method: method, headers: { 'Content-Type': 'application/json' } }
+      if (apiKey) vendorReqInit.headers[authHeader] = apiKey
+      if (tmpl){
+        vendorUrl = tmpl.replace('{url}', encodeURIComponent(youtube_url))
+        if (method === 'GET') { vendorReqInit = { method, headers: vendorReqInit.headers } }
+        else vendorReqInit.body = JSON.stringify({ youtube_url })
+      } else if (base){
+        vendorUrl = `${base}/download`
+        if (method === 'GET') {
+          const u = new URL(vendorUrl)
+          u.searchParams.set('youtube_url', youtube_url)
+          vendorUrl = u.toString()
+          vendorReqInit = { method, headers: vendorReqInit.headers }
+        } else {
+          vendorReqInit.body = JSON.stringify({ youtube_url })
+        }
+      }
+      if (vendorUrl){
+        const vr = await fetch(vendorUrl, vendorReqInit)
+        const vtxt = await vr.text().catch(()=> '')
+        let vjson = null
+        try { vjson = JSON.parse(vtxt) } catch {}
+        if (!vr.ok){
+          // Surface vendor error for debugging
+          return res.status(vr.status || 502).json({ error: 'vendor_failed', details: vjson?.error || vtxt || String(vr.status) })
+        }
+        const downloadUrl = vjson?.url || vjson?.download_url || vjson?.result?.url || ''
+        if (downloadUrl){
+          return res.json({ url: String(downloadUrl), key: null, title: vjson?.title || null, length_seconds: Number(vjson?.length_seconds||0)||undefined })
+        }
+        // If vendor returns a file (stream), just forward headers/body
+        const ct = vr.headers.get('content-type') || ''
+        if (!ct.includes('application/json')){
+          res.status(200)
+          if (ct) res.set('Content-Type', ct)
+          return res.send(vtxt)
+        }
+        // No usable URL in vendor JSON; fall through to self-hosted methods
+      }
+    } catch (e) {
+      // If vendor integration fails for any reason, continue with built-in methods
+      console.warn('Vendor downloader integration failed:', e?.message || e)
     }
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'yt-'))
@@ -1050,39 +1190,74 @@ app.post('/download_youtube', async (req, res) => {
         }
 
         // Build cookies file if provided
-        let cookieFile = ''
-        if (cookiesTxtBase64){
+        // Helper: normalize cookies buffer to UTF-8 Netscape format
+        function normalizeCookiesBuffer(buf){
           try {
-            const ckTmp = path.join(tmp, 'cookies.txt')
-            fs.writeFileSync(ckTmp, Buffer.from(cookiesTxtBase64, 'base64'))
-            cookieFile = ckTmp
-          } catch {}
-        } else if (cookieB64Env){
-          try {
-            const ckTmp = path.join(tmp, 'cookies.txt')
-            fs.writeFileSync(ckTmp, Buffer.from(cookieB64Env, 'base64'))
-            cookieFile = ckTmp
-          } catch {}
-        } else if (combinedCookieHdr){
-          try {
-            const ckTmp = path.join(tmp, 'cookies.txt')
-            const nowExp = 2147483647 // far future
-            const pairs = String(combinedCookieHdr).split(/;\s*/).map(s=>s.trim()).filter(Boolean)
-            const lines = ['# Netscape HTTP Cookie File']
-            for (const pair of pairs){
-              const eq = pair.indexOf('='); if (eq <= 0) continue
-              const name = pair.slice(0, eq).trim()
-              const value = pair.slice(eq+1).trim()
-              const domain = '.youtube.com'
-              const includeSub = 'TRUE'
-              const pathCookie = '/'
-              const secure = 'FALSE'
-              lines.push([domain, includeSub, pathCookie, secure, String(nowExp), name, value].join('\t'))
+            if (!buf || !buf.length) return Buffer.from('')
+            // UTF-16 BOM LE
+            if (buf.length>=2 && buf[0]===0xFF && buf[1]===0xFE){
+              const td = new TextDecoder('utf-16le')
+              const s = td.decode(buf.slice(2))
+              return Buffer.from(s, 'utf8')
             }
-            fs.writeFileSync(ckTmp, lines.join('\n'), 'utf8')
-            cookieFile = ckTmp
-          } catch {}
+            // UTF-16 BOM BE
+            if (buf.length>=2 && buf[0]===0xFE && buf[1]===0xFF){
+              const le = Buffer.allocUnsafe(buf.length - 2)
+              for (let j=2, k=0; j+1<buf.length; j+=2, k+=2){ le[k] = buf[j+1]; le[k+1] = buf[j] }
+              const td = new TextDecoder('utf-16le')
+              const s = td.decode(le)
+              return Buffer.from(s, 'utf8')
+            }
+            // Heuristic: lots of NUL bytes implies UTF-16LE without BOM
+            let nul = 0; for (let i=0;i<buf.length;i++){ if (buf[i]===0) nul++ }
+            if (nul > buf.length/4){
+              const td = new TextDecoder('utf-16le')
+              const s = td.decode(buf)
+              return Buffer.from(s, 'utf8')
+            }
+            return buf
+          } catch { return buf }
         }
+
+    let cookieFile = ''
+    // Prefer stored admin cookies if present when none are provided inline
+    try { if (fs.existsSync(COOKIES_STORE_PATH) && !cookiesTxtBase64 && !cookieB64Env && !combinedCookieHdr) cookieFile = COOKIES_STORE_PATH } catch {}
+    if (cookiesTxtBase64){
+      try {
+        const ckTmp = path.join(tmp, 'cookies.txt')
+        const raw = Buffer.from(cookiesTxtBase64, 'base64')
+        const norm = normalizeCookiesBuffer(raw)
+        fs.writeFileSync(ckTmp, norm)
+        cookieFile = ckTmp
+      } catch {}
+    } else if (cookieB64Env){
+      try {
+        const ckTmp = path.join(tmp, 'cookies.txt')
+        const raw = Buffer.from(cookieB64Env, 'base64')
+        const norm = normalizeCookiesBuffer(raw)
+        fs.writeFileSync(ckTmp, norm)
+        cookieFile = ckTmp
+      } catch {}
+    } else if (combinedCookieHdr){
+      try {
+        const ckTmp = path.join(tmp, 'cookies.txt')
+        const nowExp = 2147483647 // far future
+        const pairs = String(combinedCookieHdr).split(/;\s*/).map(s=>s.trim()).filter(Boolean)
+        const lines = ['# Netscape HTTP Cookie File']
+        for (const pair of pairs){
+          const eq = pair.indexOf('='); if (eq <= 0) continue
+          const name = pair.slice(0, eq).trim()
+          const value = pair.slice(eq+1).trim()
+          const domain = '.youtube.com'
+          const includeSub = 'TRUE'
+          const pathCookie = '/'
+          const secure = 'FALSE'
+          lines.push([domain, includeSub, pathCookie, secure, String(nowExp), name, value].join('\t'))
+        }
+        fs.writeFileSync(ckTmp, lines.join('\n'), 'utf8')
+        cookieFile = ckTmp
+      } catch {}
+    }
 
         // Common args
         const maxHraw = Number(process.env.YT_DLP_MAX_HEIGHT || 720)
@@ -1477,12 +1652,98 @@ app.post('/render_batch', async (req, res) => {
 })
 
 // Auto clipper: transcribe uploaded video, choose segments, render clips
-// Public test endpoint: forwards to auto_clip with server-side secret when protected by Vercel bypass header
+// Public endpoint: forwards to auto_clip with server-side secret when request originates from allowed origins
+// Async job starter (public): returns 202 with job_id and processes in background
+app.post('/auto_clip_start_public', async (req, res) => {
+  try {
+    // Same allowlist logic as /auto_clip_public
+    const bypass = req.header('x-vercel-protection-bypass') || req.header('x-vercel-protection-bypass-secret') || ''
+    const origin = String(req.headers.origin || '').toLowerCase()
+    const allowed = (() => {
+      if (bypass) return true
+      if (!origin) return false
+      try {
+        const u = new URL(origin)
+        const h = u.host || ''
+        if (h === 'clipcatalyst.net') return true
+        if (h.endsWith('.vercel.app')) return true
+      } catch {}
+      return false
+    })()
+    if (!allowed) return res.status(403).json({ error: 'forbidden' })
+
+    const params = req.body || {}
+    const id = newJobId()
+    setJob(id, { id, status: 'queued', result: null, error: null })
+    // kick off background processing
+    ;(async ()=>{
+      try {
+        setJob(id, { status: 'running' })
+        const result = await runAutoClipJob(params)
+        setJob(id, { status: 'completed', result })
+      } catch (e) {
+        setJob(id, { status: 'error', error: String(e?.message || e) })
+      }
+    })()
+
+    res.status(202).json({ job_id: id })
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'start failed' })
+  }
+})
+
+// Async job starter (private): requires shared secret
+app.post('/auto_clip_start', async (req, res) => {
+  try {
+    const required = process.env.SHARED_SECRET
+    if (required && req.header('x-shared-secret') !== required) return res.status(403).json({ error: 'forbidden' })
+    const params = req.body || {}
+    const id = newJobId()
+    setJob(id, { id, status: 'queued', result: null, error: null })
+    ;(async ()=>{
+      try {
+        setJob(id, { status: 'running' })
+        const result = await runAutoClipJob(params)
+        setJob(id, { status: 'completed', result })
+      } catch (e) {
+        setJob(id, { status: 'error', error: String(e?.message || e) })
+      }
+    })()
+    res.status(202).json({ job_id: id })
+  } catch (e) { res.status(500).json({ error: e?.message || 'start failed' }) }
+})
+
+// Job status
+app.get('/jobs/:id', async (req, res) => {
+  try {
+    const id = String(req.params?.id || '').trim()
+    if (!id) return res.status(400).json({ error: 'missing id' })
+    const j = jobs.get(id)
+    if (!j) return res.status(404).json({ error: 'not_found' })
+    const { status, result, error, createdAt, updatedAt } = j
+    res.json({ id, status, error, result, createdAt, updatedAt })
+  } catch (e) { res.status(500).json({ error: e?.message || 'status failed' }) }
+})
+
 app.post('/auto_clip_public', async (req, res) => {
   try {
-    // Require Vercel deployment protection header to avoid public abuse
+    // Allow if caller includes Vercel bypass header OR Origin is allowed
     const bypass = req.header('x-vercel-protection-bypass') || req.header('x-vercel-protection-bypass-secret') || ''
-    if (!bypass) return res.status(403).json({ error: 'forbidden' })
+    const origin = String(req.headers.origin || '').toLowerCase()
+    const host = String(req.headers.host || '').toLowerCase()
+    const allowed = (() => {
+      if (bypass) return true
+      if (!origin) return false
+      try {
+        // Allow your production site and Vercel preview domains
+        const u = new URL(origin)
+        const h = u.host || ''
+        if (h === 'clipcatalyst.net') return true
+        if (h.endsWith('.vercel.app')) return true
+      } catch {}
+      return false
+    })()
+    if (!allowed) return res.status(403).json({ error: 'forbidden' })
 
     const base = process.env.DOWNLOADER_BASE_URL || ''
     const url = (runningOnVercel && base) ? `${base.replace(/\/$/,'')}/auto_clip` : `http://127.0.0.1:${Number(process.env.PORT || 8080)}/auto_clip`
@@ -1533,7 +1794,7 @@ app.post('/auto_clip', async (req, res) => {
     if (!video_url && typeof youtube_url === 'string' && youtube_url.trim()) {
       try {
         const base = process.env.DOWNLOADER_BASE_URL || ''
-        const dlUrl = (runningOnVercel && base)
+        const dlUrl = base
           ? `${base.replace(/\/$/, '')}/download_youtube`
           : `http://127.0.0.1:${Number(process.env.PORT || 8080)}/download_youtube`
         const r = await fetch(dlUrl, {
@@ -1545,7 +1806,7 @@ app.post('/auto_clip', async (req, res) => {
           body: JSON.stringify({ youtube_url })
         })
         const j = await r.json().catch(()=>null)
-        if (!r.ok || !j?.url) return res.status(r.status || 502).json({ error: 'youtube_download_failed', details: j?.error || 'no url' })
+        if (!r.ok || !j?.url) return res.status(r.status || 502).json({ error: 'youtube_download_failed', details: j?.details || j?.error || 'no url' })
         video_url = String(j.url)
       } catch (e) {
         return res.status(502).json({ error: 'youtube_download_failed', details: String(e?.message || e) })
@@ -1565,6 +1826,19 @@ app.post('/auto_clip', async (req, res) => {
     const rv = await fetch(video_url)
     if (!rv.ok) { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'failed to fetch video_url' }) }
     fs.writeFileSync(vidPath, Buffer.from(await rv.arrayBuffer()))
+
+    // Probe input to ensure an audio stream exists (fail fast with friendly error)
+    const hasAudioStream = await new Promise((resolve) => {
+      try {
+        ffmpegLib.ffprobe(vidPath, (_err, data) => {
+          try {
+            const streams = Array.isArray(data?.streams) ? data.streams : []
+            resolve(streams.some((s) => String(s?.codec_type||'').toLowerCase() === 'audio'))
+          } catch { resolve(false) }
+        })
+      } catch { resolve(false) }
+    })
+    if (!hasAudioStream) { try { fs.rmSync(tmp, { recursive: true, force: true }) } catch {}; return res.status(400).json({ error: 'no_audio_stream', details: 'The input video contains no audio track; cannot transcribe.' }) }
 
     // Extract audio to MP3
     await new Promise((resolve, reject) => {
@@ -1875,14 +2149,22 @@ app.post('/auto_clip', async (req, res) => {
       cmd.input(vidPath)
 
       const assEsc = assPath.replace(/:/g,'\\:').replace(/'/g,"\\'")
-      const vf = `scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=#0b0b0f,format=yuv420p,ass='${assEsc}'`
       const startSec = (sMs/1000).toFixed(3)
       const durSec = ((eMs - sMs)/1000).toFixed(3)
-      cmd.complexFilter([
-        `[0:v]${vf}[v]`,
-        `[1:v]trim=start=${startSec}:duration=${durSec},setpts=PTS-STARTPTS[v2]`,
+      // Build a connected filtergraph: compose background + trimmed foreground, then apply subtitles
+      const filters = [
+        // Ensure 1080x1920 background
+        `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,setpts=PTS-STARTPTS[bg]`,
+        // Trim and scale foreground (source video)
+        `[1:v]trim=start=${startSec}:duration=${durSec},setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=decrease,setsar=1[fg]`,
+        // Overlay centered, stop at shortest
+        `[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[base]`,
+        // Subtitles and format
+        `[base]format=yuv420p,ass='${assEsc}'[v]`,
+        // Trim audio to the same window
         `[1:a]atrim=start=${startSec}:duration=${durSec},asetpts=PTS-STARTPTS[a]`
-      ])
+      ]
+      cmd.complexFilter(filters)
       cmd.outputOptions([
         '-map','[v]','-map','[a]',
         '-c:v','libx264','-preset','medium','-crf','20',

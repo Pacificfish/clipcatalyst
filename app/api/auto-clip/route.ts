@@ -42,49 +42,60 @@ export async function POST(req: NextRequest) {
     const BYPASS = process.env.VERCEL_PROTECTION_BYPASS || process.env.VERCEL_BYPASS_TOKEN || bypassFromClient || ''
 
     const payload = { video_url, youtube_url: (body.youtube_url || undefined), target_clip_count, min_ms, max_ms, language, bg_url, bg_urls }
-    const headers: Record<string, string> = {}
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (BYPASS) headers['x-vercel-protection-bypass'] = BYPASS
     const SECRET = process.env.RENDER_WORKER_SECRET || ''
     if (SECRET) headers['x-shared-secret'] = SECRET
 
-    // Try common worker paths in order:
-    // 1) /api/auto_clip_public (Vercel serverless exported app)
-    // 2) /auto_clip_public (plain Express on a VM)
-    // 3) /auto_clip (older naming)
-    const candidates = [
-      `${WORKER_BASE_URL}/api/auto_clip_public`,
-      `${WORKER_BASE_URL}/auto_clip_public`,
-      `${WORKER_BASE_URL}/auto_clip`,
+    // Use async start endpoints so we don't block and hit timeouts.
+    const startCandidates = [
+      `${WORKER_BASE_URL}/auto_clip_start`,
+      `${WORKER_BASE_URL}/auto_clip_start_public`,
+      `${WORKER_BASE_URL}/api/auto_clip_start_public`,
     ]
 
-    let forward: Response | null = null
+    let resp: Response | null = null
     let lastErrText = ''
-    for (const u of candidates) {
+    for (const u of startCandidates) {
       try {
-        const r = await tryPost(u, payload, headers)
+        const r = await fetch(u, { method: 'POST', headers, body: JSON.stringify(payload), cache: 'no-store' })
         if (r.status === 404 || r.status === 403) {
           lastErrText = await r.text().catch(() => '')
-          // try next candidate on 404/403
           continue
         }
-        forward = r; break
+        resp = r; break
       } catch (e: any) {
         lastErrText = String(e?.message || e)
       }
     }
 
-    if (!forward) {
-      return NextResponse.json({ error: 'worker_unreachable', details: lastErrText || 'all candidates returned 404' }, { status: 502 })
+    if (!resp) {
+      return NextResponse.json({ error: 'worker_unreachable', details: lastErrText || 'all candidates returned 404/403' }, { status: 502 })
     }
 
-    const text = await forward.text().catch(() => '')
-    const ct = forward.headers.get('content-type') || ''
-    const init: ResponseInit = { status: forward.status, headers: {} }
-    if (ct.includes('application/json')) {
-      return new NextResponse(text, { ...init, headers: { 'Content-Type': 'application/json' } })
-    }
-    return new NextResponse(text, init)
+    const text = await resp.text().catch(() => '')
+    return new NextResponse(text, { status: resp.status, headers: { 'Content-Type': 'application/json' } })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'proxy failed' }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const jobId = req.nextUrl.searchParams.get('job_id') || ''
+    if (!jobId) return NextResponse.json({ error: 'job_id required' }, { status: 400 })
+
+    const WORKER_BASE_URL = (
+      process.env.RENDER_WORKER_URL ||
+      process.env.WORKER_BASE_URL ||
+      process.env.NEXT_PUBLIC_WORKER_BASE_URL ||
+      'https://clipcatalyst-worker.fly.dev'
+    ).replace(/\/$/, '')
+
+    const r = await fetch(`${WORKER_BASE_URL}/jobs/${encodeURIComponent(jobId)}`, { cache: 'no-store' })
+    const txt = await r.text().catch(() => '')
+    return new NextResponse(txt, { status: r.status, headers: { 'Content-Type': 'application/json' } })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'status failed' }, { status: 500 })
   }
 }

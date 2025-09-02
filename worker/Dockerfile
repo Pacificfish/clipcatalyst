@@ -7,10 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certi
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY package*.json ./
+# Copy only the worker package manifests from the repo root context
+COPY worker/package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
-COPY . .
+# Copy only the worker sources
+COPY worker/. .
 
 ENV NODE_ENV=production
 ENV FFMPEG_PATH=/usr/bin/ffmpeg

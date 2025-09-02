@@ -440,9 +440,20 @@ export default function LabPage() {
                       onClick={async ()=>{
                         try {
                           setYtAutoBusy(true); setYtAutoResult(null); setYtError(null);
-                          const r = await fetch('/api/auto-clip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
-                          const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'Auto clip failed')
-                          setYtAutoResult(j)
+                          const start = await fetch('/api/auto-clip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl.trim() }) })
+                          const stxt = await start.text(); let sjson:any=null; try { sjson = JSON.parse(stxt) } catch {}
+                          if (!start.ok) throw new Error(sjson?.error || 'Start failed')
+                          const jobId: string = sjson?.job_id || ''
+                          if (!jobId) { setYtAutoResult(sjson); return }
+                          // poll
+                          for (let i=0;i<900;i++){
+                            await new Promise(r=>setTimeout(r,3000))
+                            const sr = await fetch(`/api/auto-clip?job_id=${encodeURIComponent(jobId)}`, { cache: 'no-store' })
+                            const t = await sr.text(); let j:any=null; try { j = JSON.parse(t) } catch {}
+                            if (!sr.ok) throw new Error(j?.error || 'Status failed')
+                            if (j?.status === 'completed') { setYtAutoResult(j.result); break }
+                            if (j?.status === 'error') { throw new Error(j?.error || 'Auto clip failed') }
+                          }
                         } catch (e: any) { setYtError(e?.message || 'Auto clip failed') } finally { setYtAutoBusy(false) }
                       }}
                       disabled={ytLoading || ytAutoBusy || !ytUrl.trim()}
@@ -578,16 +589,28 @@ function AutoclipperSimple({ initialUrl = '' }: { initialUrl?: string }) {
           />
           <button
             className="btn-primary"
-            onClick={async ()=>{
-              try {
-                setYtBusy2(true); setYtErr2(null); setYtRes2(null)
-                const r = await fetch('/api/auto-clip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ youtube_url: ytUrl2.trim() }) })
-                const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'Auto clip failed')
-                setYtRes2(j)
-              } catch (e: any) { setYtErr2(e?.message || 'Auto clip failed') } finally { setYtBusy2(false) }
-            }}
-            disabled={ytBusy2 || !ytUrl2.trim()}
-          >{ytBusy2 ? 'Auto clipping…' : 'Auto Clip'}</button>
+                      onClick={async ()=>{
+                        try {
+                          setYtBusy2(true); setYtErr2(null); setYtRes2(null)
+                          const headers: Record<string,string> = { 'Content-Type': 'application/json' }
+                          if (process.env.NEXT_PUBLIC_VERCEL_BYPASS) headers['x-vercel-protection-bypass'] = String(process.env.NEXT_PUBLIC_VERCEL_BYPASS)
+                          const start = await fetch('/api/auto-clip', { method: 'POST', headers, body: JSON.stringify({ youtube_url: ytUrl2.trim() }) })
+                          const stxt = await start.text(); let sjson:any=null; try { sjson = JSON.parse(stxt) } catch {}
+                          if (!start.ok) throw new Error(sjson?.error || 'Start failed')
+                          const jobId: string = sjson?.job_id || ''
+                          if (!jobId) { setYtRes2(sjson); return }
+                          for (let i=0;i<900;i++){
+                            await new Promise(r=>setTimeout(r,3000))
+                            const sr = await fetch(`/api/auto-clip?job_id=${encodeURIComponent(jobId)}`, { cache: 'no-store' })
+                            const t = await sr.text(); let j:any=null; try { j = JSON.parse(t) } catch {}
+                            if (!sr.ok) throw new Error(j?.error || 'Status failed')
+                            if (j?.status === 'completed') { setYtRes2(j.result); break }
+                            if (j?.status === 'error') { throw new Error(j?.error || 'Auto clip failed') }
+                          }
+                        } catch (e: any) { setYtErr2(e?.message || 'Auto clip failed') } finally { setYtBusy2(false) }
+                      }}
+                      disabled={ytBusy2 || !ytUrl2.trim()}
+                    >{ytBusy2 ? 'Auto clipping…' : 'Auto Clip'}</button>
         </div>
         {ytErr2 && <div className="mt-2 text-xs text-rose-300">{ytErr2}</div>}
         {ytRes2?.clips && Array.isArray(ytRes2.clips) && ytRes2.clips.length>0 && (
